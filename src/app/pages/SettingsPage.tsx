@@ -73,13 +73,12 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 p-6">
-      <h1 className="text-xl font-semibold text-foreground">Settings</h1>
+      <h1 className="text-xl font-semibold text-foreground">Family settings</h1>
 
       {/* Family name */}
       {isParent && (
         <>
           <section className="space-y-4">
-            <h2 className="text-base font-semibold text-foreground">Family</h2>
             <Form {...renameForm}>
               <form
                 onSubmit={renameForm.handleSubmit(onRename)}
@@ -90,7 +89,6 @@ export function SettingsPage() {
                   name="name"
                   render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel>Family name</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>

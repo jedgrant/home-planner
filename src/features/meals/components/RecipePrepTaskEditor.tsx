@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -16,10 +15,10 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useState } from 'react'
 import { GripVertical, Plus, Trash2 } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { Button } from '@/shared/components/ui/button'
-import { Input } from '@/shared/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -27,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select'
+import { PrepTaskTiptap } from './PrepTaskTiptap'
 import type { PrepTask, TaskDifficulty } from '@/shared/types/recipes'
 
 // ── Sortable row ──────────────────────────────────────────────────────────────
@@ -35,6 +35,7 @@ interface SortableTaskRowProps {
   task: PrepTask
   onRemove: () => void
   onChangeDifficulty: (d: TaskDifficulty) => void
+  onDescriptionChange: (html: string) => void
   disabled: boolean
 }
 
@@ -42,6 +43,7 @@ function SortableTaskRow({
   task,
   onRemove,
   onChangeDifficulty,
+  onDescriptionChange,
   disabled,
 }: SortableTaskRowProps) {
   const {
@@ -63,45 +65,53 @@ function SortableTaskRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2"
+      className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2"
     >
       {!disabled && (
         <button
           {...attributes}
           {...listeners}
-          className="cursor-grab touch-none text-muted-foreground"
+          className="cursor-grab touch-none text-muted-foreground mt-1 shrink-0"
           aria-label="Drag to reorder"
         >
           <GripVertical className="h-4 w-4" />
         </button>
       )}
-      <p className="min-w-0 flex-1 text-sm">{task.description}</p>
-      <Select
-        value={task.difficulty}
-        onValueChange={(v) => onChangeDifficulty(v as TaskDifficulty)}
-        disabled={disabled}
-      >
-        <SelectTrigger className="h-7 w-24 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="easy">Easy</SelectItem>
-          <SelectItem value="medium">Medium</SelectItem>
-          <SelectItem value="hard">Hard</SelectItem>
-        </SelectContent>
-      </Select>
-      {!disabled && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-          onClick={onRemove}
-          aria-label={`Remove task: ${task.description}`}
+
+      <PrepTaskTiptap
+        content={task.description}
+        editable={!disabled}
+        onDebouncedChange={onDescriptionChange}
+      />
+
+      <div className="flex items-center gap-1 shrink-0 mt-0.5">
+        <Select
+          value={task.difficulty}
+          onValueChange={(v) => onChangeDifficulty(v as TaskDifficulty)}
+          disabled={disabled}
         >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-      )}
+          <SelectTrigger className="h-7 w-24 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="easy">Easy</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="hard">Hard</SelectItem>
+          </SelectContent>
+        </Select>
+        {!disabled && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            onClick={onRemove}
+            aria-label="Remove task"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
     </div>
   )
 }
@@ -110,23 +120,25 @@ function SortableTaskRow({
 
 interface RecipePrepTaskEditorProps {
   tasks: PrepTask[]
+  /** Called immediately whenever tasks change structurally (add/remove/reorder/difficulty). */
   onChange: (tasks: PrepTask[]) => void
+  /** Called after 1.5 s debounce when a task's rich-text description changes, and also immediately on structural changes. */
+  onSave: (tasks: PrepTask[]) => void
   disabled?: boolean
 }
 
 export function RecipePrepTaskEditor({
   tasks,
   onChange,
+  onSave,
   disabled = false,
 }: RecipePrepTaskEditorProps) {
-  const [newDesc, setNewDesc] = useState('')
   const [newDifficulty, setNewDifficulty] = useState<TaskDifficulty>('easy')
+  const [pendingHtml, setPendingHtml] = useState('')
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
   function handleDragEnd(event: DragEndEvent) {
@@ -139,20 +151,24 @@ export function RecipePrepTaskEditor({
       order: i,
     }))
     onChange(reordered)
+    onSave(reordered)
   }
 
   function handleAdd() {
-    if (!newDesc.trim()) return
-    onChange([
+    const trimmed = pendingHtml.trim().replace(/^<p><\/p>$/, '')
+    if (!trimmed) return
+    const updated = [
       ...tasks,
       {
         taskId: nanoid(),
-        description: newDesc.trim(),
+        description: trimmed,
         difficulty: newDifficulty,
         order: tasks.length,
       },
-    ])
-    setNewDesc('')
+    ]
+    onChange(updated)
+    onSave(updated)
+    setPendingHtml('')
     setNewDifficulty('easy')
   }
 
@@ -161,10 +177,19 @@ export function RecipePrepTaskEditor({
       .filter((t) => t.taskId !== taskId)
       .map((t, i) => ({ ...t, order: i }))
     onChange(updated)
+    onSave(updated)
   }
 
   function handleChangeDifficulty(taskId: string, difficulty: TaskDifficulty) {
-    onChange(tasks.map((t) => (t.taskId === taskId ? { ...t, difficulty } : t)))
+    const updated = tasks.map((t) => (t.taskId === taskId ? { ...t, difficulty } : t))
+    onChange(updated)
+    onSave(updated)
+  }
+
+  function handleDescriptionChange(taskId: string, html: string) {
+    const updated = tasks.map((t) => (t.taskId === taskId ? { ...t, description: html } : t))
+    onChange(updated)
+    onSave(updated)
   }
 
   const sorted = [...tasks].sort((a, b) => a.order - b.order)
@@ -186,6 +211,7 @@ export function RecipePrepTaskEditor({
               task={task}
               onRemove={() => handleRemove(task.taskId)}
               onChangeDifficulty={(d) => handleChangeDifficulty(task.taskId, d)}
+              onDescriptionChange={(html) => handleDescriptionChange(task.taskId, html)}
               disabled={disabled}
             />
           ))}
@@ -193,20 +219,19 @@ export function RecipePrepTaskEditor({
       </DndContext>
 
       {!disabled && (
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Task description"
-            value={newDesc}
-            onChange={(e) => setNewDesc(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAdd())}
-            className="flex-1"
-            aria-label="New task description"
-          />
+        <div className="flex items-start gap-2 pt-1">
+          <div className="flex-1 rounded-lg border border-border bg-background px-3 py-2">
+            <PrepTaskTiptap
+              content={pendingHtml}
+              editable
+              onDebouncedChange={setPendingHtml}
+            />
+          </div>
           <Select
             value={newDifficulty}
             onValueChange={(v) => setNewDifficulty(v as TaskDifficulty)}
           >
-            <SelectTrigger className="w-24">
+            <SelectTrigger className="w-24 mt-0.5">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -220,10 +245,10 @@ export function RecipePrepTaskEditor({
             size="sm"
             variant="outline"
             onClick={handleAdd}
-            disabled={!newDesc.trim()}
-            aria-label="Add task"
+            className="mt-0.5"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 mr-1" />
+            Add
           </Button>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { format, addDays, startOfDay } from 'date-fns'
 import { ShoppingCart, UtensilsCrossed, CheckCircle2, Clock, AlertCircle, ChevronRight } from 'lucide-react'
 import { useAuthStore } from '@/shared/lib/authStore'
@@ -184,6 +184,11 @@ function ChildChoreCard({ member, weekDoc }: ChildChoreCardProps) {
 
 export function DashboardPage() {
   const { user } = useAuthStore()
+
+  if (user?.role === 'child') {
+    return <Navigate to="/child-dashboard" replace />
+  }
+
   const familyId = user?.familyId ?? ''
 
   // Meals — next 7 days

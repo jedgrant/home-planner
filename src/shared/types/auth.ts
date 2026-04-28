@@ -27,8 +27,9 @@ export interface InviteCode {
   role: UserRole
   createdBy: string
   createdAt: Timestamp
-  expiresAt: Timestamp
+  expiresAt: Timestamp | null  // null for reusable (child) codes
   used: boolean
   usedBy: string | null
   usedAt: Timestamp | null
+  reusable: boolean
 }

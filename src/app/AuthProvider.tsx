@@ -19,6 +19,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return
       }
 
+      setLoading(true)
       try {
         const userDoc = await getDoc(doc(db, USERS, firebaseUser.uid))
         if (userDoc.exists()) {

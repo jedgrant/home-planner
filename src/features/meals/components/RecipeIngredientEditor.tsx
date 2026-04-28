@@ -29,10 +29,37 @@ export function RecipeIngredientEditor({
 }: RecipeIngredientEditorProps) {
   const [newName, setNewName] = useState('')
   const [newQty, setNewQty] = useState('')
+  const [newUnit, setNewUnit] = useState('')
   const [newStoreId, setNewStoreId] = useState('')
 
+  const NONE = 'Select a store'
+  const NO_UNIT = '__no_unit__'
+
+  const UNIT_OPTIONS = [
+    { value: NO_UNIT, label: '—' },
+    { value: 'tsp', label: 'tsp' },
+    { value: 'tbsp', label: 'tbsp' },
+    { value: 'fl oz', label: 'fl oz' },
+    { value: 'cup', label: 'cup' },
+    { value: 'pt', label: 'pt' },
+    { value: 'qt', label: 'qt' },
+    { value: 'gal', label: 'gal' },
+    { value: 'oz', label: 'oz' },
+    { value: 'lb', label: 'lb' },
+    { value: 'g', label: 'g' },
+    { value: 'kg', label: 'kg' },
+    { value: 'ml', label: 'ml' },
+    { value: 'L', label: 'L' },
+    { value: 'pinch', label: 'pinch' },
+    { value: 'clove', label: 'clove' },
+    { value: 'slice', label: 'slice' },
+    { value: 'piece', label: 'piece' },
+    { value: 'can', label: 'can' },
+    { value: 'pkg', label: 'pkg' },
+  ]
+
   const storeOptions = [
-    { value: '', label: 'No store' },
+    { value: NONE, label: 'No store' },
     ...stores.map((s) => ({ value: s.storeId, label: s.name })),
   ]
 
@@ -42,20 +69,24 @@ export function RecipeIngredientEditor({
 
   function handleAdd() {
     if (!newName.trim()) return
-    const store = stores.find((s) => s.storeId === newStoreId)
+    const resolvedStoreId = newStoreId === NONE ? null : newStoreId || null
+    const store = stores.find((s) => s.storeId === resolvedStoreId)
+    const resolvedUnit = newUnit === NO_UNIT ? null : newUnit || null
     onChange([
       ...ingredients,
       {
         ingredientId: nanoid(),
         name: newName.trim(),
         quantity: newQty.trim(),
-        storeId: newStoreId || null,
+        unit: resolvedUnit,
+        storeId: resolvedStoreId,
         storeName: store?.name ?? null,
       },
     ])
     setNewName('')
     setNewQty('')
-    setNewStoreId('')
+    setNewUnit(NO_UNIT)
+    setNewStoreId(NONE)
   }
 
   function handleRemove(ingredientId: string) {
@@ -63,11 +94,12 @@ export function RecipeIngredientEditor({
   }
 
   function handleUpdateStore(ingredientId: string, storeId: string) {
-    const store = stores.find((s) => s.storeId === storeId)
+    const resolvedStoreId = storeId === NONE ? null : storeId || null
+    const store = stores.find((s) => s.storeId === resolvedStoreId)
     onChange(
       ingredients.map((i) =>
         i.ingredientId === ingredientId
-          ? { ...i, storeId: storeId || null, storeName: store?.name ?? null }
+          ? { ...i, storeId: resolvedStoreId, storeName: store?.name ?? null }
           : i
       )
     )
@@ -77,6 +109,15 @@ export function RecipeIngredientEditor({
     onChange(
       ingredients.map((i) =>
         i.ingredientId === ingredientId ? { ...i, quantity: qty } : i
+      )
+    )
+  }
+
+  function handleUpdateUnit(ingredientId: string, raw: string) {
+    const unit = raw === NO_UNIT ? null : raw || null
+    onChange(
+      ingredients.map((i) =>
+        i.ingredientId === ingredientId ? { ...i, unit } : i
       )
     )
   }
@@ -93,21 +134,47 @@ export function RecipeIngredientEditor({
               <span className="min-w-0 flex-1 text-sm font-medium truncate">
                 {ing.name}
               </span>
-              <Input
-                className="w-24 h-7 text-xs"
-                placeholder="Qty"
-                value={ing.quantity}
-                onChange={(e) => handleUpdateQty(ing.ingredientId, e.target.value)}
-                disabled={disabled}
-                aria-label={`Quantity for ${ing.name}`}
-              />
+              {disabled ? (
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {[ing.quantity, ing.unit].filter(Boolean).join(' ')}
+                </span>
+              ) : (
+                <>
+                  <Input
+                    className="w-16 h-7 text-xs"
+                    placeholder="Qty"
+                    value={ing.quantity}
+                    onChange={(e) => handleUpdateQty(ing.ingredientId, e.target.value)}
+                    aria-label={`Quantity for ${ing.name}`}
+                  />
+                  <Select
+                    value={ing.unit ?? NO_UNIT}
+                    onValueChange={(v) => handleUpdateUnit(ing.ingredientId, v ?? NO_UNIT)}
+                  >
+                    <SelectTrigger className="h-7 w-24 text-xs">
+                      <SelectValue>
+                        {UNIT_OPTIONS.find((o) => o.value === (ing.unit ?? NO_UNIT))?.label ?? '—'}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {UNIT_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
               <Select
-                value={ing.storeId ?? ''}
-                onValueChange={(v) => handleUpdateStore(ing.ingredientId, v ?? '')}
+                value={ing.storeId ?? NONE}
+                onValueChange={(v) => handleUpdateStore(ing.ingredientId, v ?? NONE)}
                 disabled={disabled}
               >
                 <SelectTrigger className="h-7 w-32 text-xs">
-                  <SelectValue placeholder="No store" />
+                  <SelectValue>
+                    {storeOptions.find((o) => o.value === (ing.storeId ?? NONE))?.label ?? 'No store'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {storeOptions.map((o) => (
@@ -146,15 +213,31 @@ export function RecipeIngredientEditor({
             className="flex-1"
           />
           <Input
-            className="w-24"
+            className="w-16"
             placeholder="Qty"
             value={newQty}
             onChange={(e) => setNewQty(e.target.value)}
             aria-label="New ingredient quantity"
           />
-          <Select value={newStoreId} onValueChange={(v) => setNewStoreId(v ?? '')}>
+          <Select value={newUnit || NO_UNIT} onValueChange={(v) => setNewUnit(v ?? NO_UNIT)}>
+            <SelectTrigger className="w-24">
+              <SelectValue>
+                {UNIT_OPTIONS.find((o) => o.value === (newUnit || NO_UNIT))?.label ?? '—'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {UNIT_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={newStoreId || NONE} onValueChange={(v) => setNewStoreId(v ?? NONE)}>
             <SelectTrigger className="w-32">
-              <SelectValue placeholder="Store" />
+              <SelectValue>
+                {storeOptions.find((o) => o.value === (newStoreId || NONE))?.label ?? 'No store'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {storeOptions.map((o) => (
@@ -170,9 +253,9 @@ export function RecipeIngredientEditor({
             variant="outline"
             onClick={handleAdd}
             disabled={!newName.trim()}
-            aria-label="Add ingredient"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 mr-1" />
+            Add
           </Button>
         </div>
       )}

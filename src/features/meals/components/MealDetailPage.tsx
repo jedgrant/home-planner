@@ -34,6 +34,8 @@ import { useAIAssignTasks } from '../hooks/useMealAI'
 import { MealRecipeSection } from './MealRecipeSection'
 import type { MealRecipe, MealTask } from '@/shared/types/meals'
 
+const CLEANUP_TASKS = ['Dishes', 'Put away food', 'Wipe down counters']
+
 const statusVariant: Record<string, 'secondary' | 'outline' | 'default'> = {
   planned: 'outline',
   in_progress: 'secondary',
@@ -96,6 +98,11 @@ export function MealDetailPage() {
     r.tasks.length === 0 || r.tasks.every((t) => t.completedAt !== null)
   )
   const hasTasks = m.recipes.some((r) => r.tasks.length > 0)
+
+  const childMembers = familyMembers.filter((member) => member.role === 'child')
+  const assignedMemberIds = new Set(
+    m.recipes.flatMap((r) => r.tasks.map((t) => t.assigneeId)).filter(Boolean) as string[]
+  )
 
   const recipeOptions = recipes
     .filter((r) => !m.recipes.some((mr) => mr.recipeId === r.recipeId))
@@ -217,7 +224,7 @@ export function MealDetailPage() {
       {/* Back nav */}
       <Button variant="ghost" size="sm" onClick={() => navigate('/meals')} className="-ml-2">
         <ArrowLeft className="h-4 w-4 mr-1" />
-        Meal Planner
+        Dinner Planner
       </Button>
 
       {/* Header */}
@@ -283,9 +290,45 @@ export function MealDetailPage() {
         )}
       </div>
 
+      {/* Cleanup section */}
+      {childMembers.length > 0 && (
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <h2 className="font-medium">Cleanup</h2>
+            <div className="space-y-2">
+              {childMembers.map((child) => {
+                const hasMealTask = assignedMemberIds.has(child.userId)
+                return (
+                  <div key={child.userId} className="rounded-xl border p-4 space-y-2">
+                    <p className="text-sm font-medium">{child.displayName}</p>
+                    {hasMealTask ? (
+                      <p className="text-xs text-muted-foreground">
+                        Assigned to meal prep — no cleanup tasks.
+                      </p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {CLEANUP_TASKS.map((task) => (
+                          <li
+                            key={task}
+                            className="text-xs text-muted-foreground flex items-center gap-2"
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground shrink-0" />
+                            {task}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Actions */}
-      {!isServed && (
-        <div className="flex flex-wrap gap-2">
+      {!isServed && (        <div className="flex flex-wrap gap-2">
           {isParent && hasTasks && (
             <Button
               variant="outline"

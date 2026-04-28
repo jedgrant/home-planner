@@ -16,8 +16,10 @@ import { RecipeBookPage } from '@/features/meals/components/RecipeBookPage'
 import { RecipeDetailPage } from '@/features/meals/components/RecipeDetailPage'
 import { MealDetailPage } from '@/features/meals/components/MealDetailPage'
 import { ProfilePage } from '@/features/profiles/components/ProfilePage'
+import { SectionErrorBoundary } from './SectionErrorBoundary'
 import { HomePage } from './pages/HomePage'
 import { DashboardPage } from './pages/DashboardPage'
+import { ChildDashboardPage } from './pages/ChildDashboardPage'
 
 export const router = createBrowserRouter([
   {
@@ -55,14 +57,43 @@ export const router = createBrowserRouter([
             children: [
               { path: '/home', element: <HomePage /> },
               { path: '/dashboard', element: <DashboardPage /> },
+              { path: '/child-dashboard', element: <ChildDashboardPage /> },
               { path: '/chores', element: <ChoresPage /> },
               { path: '/chores/manage', element: <ChoreManagePage /> },
               { path: '/grocery', element: <GroceryPage /> },
               { path: '/grocery/:storeId', element: <StoreListPage /> },
-              { path: '/meals', element: <MealsPage /> },
-              { path: '/meals/recipes', element: <RecipeBookPage /> },
-              { path: '/meals/recipes/:id', element: <RecipeDetailPage /> },
-              { path: '/meals/:mealId', element: <MealDetailPage /> },
+              {
+                path: '/meals',
+                element: (
+                  <SectionErrorBoundary resetKey="/meals">
+                    <MealsPage />
+                  </SectionErrorBoundary>
+                ),
+              },
+              {
+                path: '/meals/recipes',
+                element: (
+                  <SectionErrorBoundary resetKey="/meals/recipes">
+                    <RecipeBookPage />
+                  </SectionErrorBoundary>
+                ),
+              },
+              {
+                path: '/meals/recipes/:id',
+                element: (
+                  <SectionErrorBoundary resetKey="/meals/recipes/:id">
+                    <RecipeDetailPage />
+                  </SectionErrorBoundary>
+                ),
+              },
+              {
+                path: '/meals/:mealId',
+                element: (
+                  <SectionErrorBoundary resetKey="/meals/:mealId">
+                    <MealDetailPage />
+                  </SectionErrorBoundary>
+                ),
+              },
               { path: '/profile/:userId', element: <ProfilePage /> },
               { path: '/settings', element: <SettingsPage /> },
             ],

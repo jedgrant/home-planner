@@ -226,3 +226,44 @@ export function useMarkServed(familyId: string) {
     },
   })
 }
+
+// ── Assign / unassign a meal task (e.g. a child volunteering) ─────────────────
+
+export function useAssignMealTask(familyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      meal,
+      recipeIndex,
+      taskIndex,
+      assigneeId,
+      assigneeName,
+    }: {
+      meal: Meal
+      recipeIndex: number
+      taskIndex: number
+      /** Pass null to unassign */
+      assigneeId: string | null
+      assigneeName: string | null
+    }) => {
+      const updatedRecipes: MealRecipe[] = meal.recipes.map((recipe, ri) => {
+        if (ri !== recipeIndex) return recipe
+        return {
+          ...recipe,
+          tasks: recipe.tasks.map((task, ti) => {
+            if (ti !== taskIndex) return task
+            return { ...task, assigneeId, assigneeName }
+          }),
+        }
+      })
+      await updateDoc(doc(db, mealsPath(familyId), meal.mealId), {
+        recipes: updatedRecipes,
+        updatedAt: serverTimestamp(),
+      })
+    },
+    onSuccess: (_data, { meal }) => {
+      qc.invalidateQueries({ queryKey: ['meal', familyId, meal.mealId] })
+      qc.invalidateQueries({ queryKey: ['meals', familyId] })
+    },
+  })
+}

@@ -54,7 +54,13 @@ service cloud.firestore {
     match /families/{familyId} {
       allow read: if isFamilyMember(familyId);
       allow create: if isSignedIn();
-      allow update: if isFamilyMember(familyId);
+      // Existing members can update anything; a new user can add only themselves via invite
+      allow update: if isFamilyMember(familyId)
+        || (isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'updatedAt'])
+          && request.resource.data.memberIds.hasAll(resource.data.memberIds)
+          && !resource.data.memberIds.hasAny([request.auth.uid])
+          && request.resource.data.memberIds.hasAny([request.auth.uid]));
       allow delete: if false;
 
       match /choreGroups/{groupId} {

@@ -10,6 +10,7 @@ export interface Ingredient {
   ingredientId: string
   name: string
   quantity: string
+  unit: string | null
   storeId: string | null
   storeName: string | null
 }

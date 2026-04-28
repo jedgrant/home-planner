@@ -94,6 +94,13 @@ export function InviteManagementCard({
                 <Badge variant="secondary" className="rounded-full text-xs capitalize">
                   {c.role}
                 </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {c.reusable
+                    ? 'Permanent'
+                    : c.expiresAt
+                    ? `Expires ${new Date(c.expiresAt.toMillis()).toLocaleDateString()}`
+                    : ''}
+                </span>
               </div>
               <div className="flex items-center gap-1">
                 <Button

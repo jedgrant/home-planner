@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   doc,
+  getDoc,
   onSnapshot,
   setDoc,
   updateDoc,
@@ -63,6 +64,7 @@ async function createWeekDoc(
   )
 
   const assignments: Record<string, WeeklyChoreAssignment> = {}
+  const weekStart = weekIdToStartDate(weekId)
 
   for (const groupDoc of groupsSnap.docs) {
     const group = { ...groupDoc.data(), groupId: groupDoc.id } as ChoreGroup
@@ -90,15 +92,21 @@ async function createWeekDoc(
       }
     }
 
+    const expectedDueDate = (() => {
+      const d = new Date(weekStart)
+      d.setDate(d.getDate() + 5) // Monday + 5 = Saturday
+      return d.toISOString().slice(0, 10)
+    })()
+
     assignments[group.groupId] = {
       assigneeId,
       assigneeName,
       groupName: group.name,
       chores,
+      expectedDueDate,
+      completedAt: null,
     }
   }
-
-  const weekStart = weekIdToStartDate(weekId)
 
   await setDoc(doc(db, weeklyChores(familyId), weekId), {
     weekId,
@@ -165,12 +173,29 @@ export async function verifyChore({
   verifiedBy,
 }: VerifyChoreParams): Promise<void> {
   const docRef = doc(db, weeklyChores(familyId), weekId)
-  await updateDoc(docRef, {
+
+  // Read current state to detect if all chores will be complete after this verify
+  const snap = await getDoc(docRef)
+  const weekData = snap.data() as import('@/shared/types/chores').WeeklyChoreDoc
+  const assignment = weekData?.assignments?.[groupId]
+
+  const updates: Record<string, unknown> = {
     [`assignments.${groupId}.chores.${choreId}.status`]: 'complete',
     [`assignments.${groupId}.chores.${choreId}.verifiedAt`]: serverTimestamp(),
     [`assignments.${groupId}.chores.${choreId}.verifiedBy`]: verifiedBy,
     updatedAt: serverTimestamp(),
-  })
+  }
+
+  if (assignment) {
+    const allComplete = Object.entries(assignment.chores).every(([cId, c]) =>
+      cId === choreId ? true : c.status === 'complete',
+    )
+    if (allComplete) {
+      updates[`assignments.${groupId}.completedAt`] = serverTimestamp()
+    }
+  }
+
+  await updateDoc(docRef, updates)
 }
 
 // ─── Request resubmission ─────────────────────────────────────────────────────

@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { ChevronDown, ChevronRight, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
-import { Card, CardContent, CardHeader } from '@/shared/components/ui/card'
-import { Badge } from '@/shared/components/ui/badge'
-import { Button } from '@/shared/components/ui/button'
+import { useEffect, useRef, useState } from "react";
+import { Pencil, RotateCcw, Trash2, Check } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,19 +13,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/shared/components/ui/alert-dialog'
-import type { ChoreGroup, ChoreItem } from '@/shared/types/chores'
-import type { RotationEntry } from '../utils/rotation'
-import { AddEditChoreDialog } from './AddEditChoreDialog'
-import { useAddChore, useUpdateChore, useDeleteChore } from '../hooks/useChoreGroups'
+} from "@/shared/components/ui/alert-dialog";
+import type { ChoreGroup } from "@/shared/types/chores";
+import type { RotationEntry } from "../utils/rotation";
+import { InlineChoreRow } from "./InlineChoreRow";
+import {
+  useAddChore,
+  useUpdateChore,
+  useDeleteChore,
+} from "../hooks/useChoreGroups";
 
 interface ChoreGroupCardProps {
-  group: ChoreGroup
-  familyId: string
-  memberNames: Record<string, string>
-  rotationSchedule: RotationEntry[]
-  onEdit: () => void
-  onArchive: () => void
+  group: ChoreGroup;
+  familyId: string;
+  memberNames: Record<string, string>;
+  rotationSchedule: RotationEntry[];
+  onEdit: () => void;
+  onArchive: () => void;
 }
 
 export function ChoreGroupCard({
@@ -35,41 +40,109 @@ export function ChoreGroupCard({
   onEdit,
   onArchive,
 }: ChoreGroupCardProps) {
-  const [expanded, setExpanded] = useState(false)
-  const [showSchedule, setShowSchedule] = useState(false)
-  const [addChoreOpen, setAddChoreOpen] = useState(false)
-  const [editingChore, setEditingChore] = useState<ChoreItem | null>(null)
-  const [deletingChoreId, setDeletingChoreId] = useState<string | null>(null)
-  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [deletingChoreId, setDeletingChoreId] = useState<string | null>(null);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [newChoreName, setNewChoreName] = useState("");
+  const [addingSaving, setAddingSaving] = useState(false);
+  const addNameRef = useRef<HTMLInputElement>(null);
 
-  const addChore = useAddChore()
-  const updateChore = useUpdateChore()
-  const deleteChore = useDeleteChore()
+  useEffect(() => {
+    addNameRef.current?.focus();
+  }, []);
+
+  async function commitAddChore() {
+    const trimmed = newChoreName.trim();
+    if (!trimmed) return;
+    setAddingSaving(true);
+    try {
+      await addChore.mutateAsync({
+        familyId,
+        groupId: group.groupId,
+        currentChores: group.chores,
+        name: trimmed,
+        description: "",
+      });
+      setNewChoreName("");
+    } finally {
+      setAddingSaving(false);
+      setTimeout(() => addNameRef.current?.focus(), 0);
+    }
+  }
+
+  function handleAddKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void commitAddChore();
+    }
+  }
+
+  const addChore = useAddChore();
+  const updateChore = useUpdateChore();
+  const deleteChore = useDeleteChore();
 
   const currentAssignee =
-    group.assignmentType === 'fixed'
-      ? group.fixedAssignees.map((id) => memberNames[id] ?? id).join(', ')
-      : (memberNames[rotationSchedule[0]?.assigneeId ?? ''] ?? '—')
+    group.assignmentType === "fixed"
+      ? group.fixedAssignees.map((id) => memberNames[id] ?? id).join(", ")
+      : (memberNames[rotationSchedule[0]?.assigneeId ?? ""] ?? "—");
 
   return (
     <>
-      <Card>
-        <CardHeader className="pb-2">
+      <Card className="gap-2">
+        <CardHeader className="pb-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-foreground">{group.name}</span>
-                <Badge variant={group.assignmentType === 'fixed' ? 'secondary' : 'outline'}>
-                  {group.assignmentType === 'fixed' ? 'Fixed' : 'Rotating'}
+                <span className="text-lg font-semibold text-foreground flex-1">
+                  {group.name}
+                </span>
+                
+                {/* Rotation schedule preview */}
+                {group.assignmentType === "rotation" &&
+                  rotationSchedule.length > 0 && (
+                    <>
+                      <button
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => setShowSchedule((v) => !v)}
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Rotation schedule
+                      </button>
+                      {showSchedule && (
+                        <div className="pl-5 space-y-1">
+                          {rotationSchedule.slice(0, 8).map((entry) => (
+                            <div
+                              key={entry.weekId}
+                              className="flex items-center gap-3 text-sm"
+                            >
+                              <span className="text-muted-foreground w-20">
+                                {entry.weekId}
+                              </span>
+                              <span className="text-foreground">
+                                {entry.assigneeName}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <Badge
+                  variant={
+                    group.assignmentType === "fixed" ? "secondary" : "outline"
+                  }
+                >
+                  {currentAssignee || "—"}
                 </Badge>
-                <span className="text-sm text-muted-foreground">{group.chores.length} chores</span>
               </div>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Current: <span className="text-foreground">{currentAssignee || '—'}</span>
-              </p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <Button variant="ghost" size="icon" onClick={onEdit} aria-label="Edit group">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onEdit}
+                aria-label="Edit group"
+              >
                 <Pencil className="h-4 w-4" />
               </Button>
               <Button
@@ -85,115 +158,50 @@ export function ChoreGroupCard({
         </CardHeader>
 
         <CardContent className="pt-0 space-y-2">
-          {/* Chore list toggle */}
-          <button
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => setExpanded((v) => !v)}
-          >
-            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            Chores
-          </button>
+          <div className="space-y-1">
+            {group.chores.map((chore) => (
+              <InlineChoreRow
+                key={chore.choreId}
+                chore={chore}
+                onSave={async (name) => {
+                  await updateChore.mutateAsync({
+                    familyId,
+                    groupId: group.groupId,
+                    currentChores: group.chores,
+                    choreId: chore.choreId,
+                    name,
+                    description: "",
+                  });
+                }}
+                onDelete={() => setDeletingChoreId(chore.choreId)}
+              />
+            ))}
 
-          {expanded && (
-            <div className="space-y-1 pl-5">
-              {group.chores.map((chore) => (
-                <div key={chore.choreId} className="flex items-center justify-between group/chore">
-                  <div>
-                    <p className="text-sm text-foreground">{chore.name}</p>
-                    {chore.description && (
-                      <p className="text-xs text-muted-foreground">{chore.description}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover/chore:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => setEditingChore(chore)}
-                      aria-label="Edit chore"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => setDeletingChoreId(chore.choreId)}
-                      aria-label="Delete chore"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            {/* Always-visible add row */}
+            <div className="flex items-center gap-1 pt-1">
+              <Input
+                ref={addNameRef}
+                value={newChoreName}
+                onChange={(e) => setNewChoreName(e.target.value)}
+                onKeyDown={handleAddKeyDown}
+                className="h-7 text-sm"
+                placeholder="Add a chore…"
+                disabled={addingSaving}
+              />
               <Button
+                size="icon"
                 variant="ghost"
-                size="sm"
-                className="mt-1 h-7 px-2 text-xs"
-                onClick={() => setAddChoreOpen(true)}
+                className="h-7 w-7 shrink-0 text-primary"
+                onClick={() => void commitAddChore()}
+                disabled={addingSaving || !newChoreName.trim()}
+                aria-label="Add chore"
               >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Add Chore
+                <Check className="h-3.5 w-3.5" />
               </Button>
             </div>
-          )}
-
-          {/* Rotation schedule preview */}
-          {group.assignmentType === 'rotation' && rotationSchedule.length > 0 && (
-            <>
-              <button
-                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setShowSchedule((v) => !v)}
-              >
-                <RotateCcw className="h-4 w-4" />
-                Rotation schedule
-              </button>
-              {showSchedule && (
-                <div className="pl-5 space-y-1">
-                  {rotationSchedule.slice(0, 8).map((entry) => (
-                    <div key={entry.weekId} className="flex items-center gap-3 text-sm">
-                      <span className="text-muted-foreground w-20">{entry.weekId}</span>
-                      <span className="text-foreground">{entry.assigneeName}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+          </div>
         </CardContent>
       </Card>
-
-      {/* Add chore dialog */}
-      <AddEditChoreDialog
-        open={addChoreOpen}
-        onOpenChange={setAddChoreOpen}
-        onSubmit={async (values) => {
-          await addChore.mutateAsync({
-            familyId,
-            groupId: group.groupId,
-            currentChores: group.chores,
-            ...values,
-          })
-        }}
-      />
-
-      {/* Edit chore dialog */}
-      {editingChore && (
-        <AddEditChoreDialog
-          open={!!editingChore}
-          onOpenChange={(open) => !open && setEditingChore(null)}
-          existingChore={editingChore}
-          onSubmit={async (values) => {
-            await updateChore.mutateAsync({
-              familyId,
-              groupId: group.groupId,
-              currentChores: group.chores,
-              choreId: editingChore.choreId,
-              ...values,
-            })
-          }}
-        />
-      )}
 
       {/* Delete chore confirm */}
       <AlertDialog
@@ -217,8 +225,8 @@ export function ChoreGroupCard({
                     groupId: group.groupId,
                     currentChores: group.chores,
                     choreId: deletingChoreId,
-                  })
-                  setDeletingChoreId(null)
+                  });
+                  setDeletingChoreId(null);
                 }
               }}
             >
@@ -229,13 +237,16 @@ export function ChoreGroupCard({
       </AlertDialog>
 
       {/* Archive group confirm */}
-      <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
+      <AlertDialog
+        open={archiveConfirmOpen}
+        onOpenChange={setArchiveConfirmOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Archive Group</AlertDialogTitle>
             <AlertDialogDescription>
-              This group will be archived and no longer appear in the weekly view. This action
-              cannot be undone.
+              This group will be archived and no longer appear in the weekly
+              view. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -245,5 +256,5 @@ export function ChoreGroupCard({
         </AlertDialogContent>
       </AlertDialog>
     </>
-  )
+  );
 }

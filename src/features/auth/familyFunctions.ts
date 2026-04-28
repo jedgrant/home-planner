@@ -8,6 +8,7 @@ import {
   query,
   where,
   writeBatch,
+  arrayUnion,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore'
@@ -56,7 +57,7 @@ export async function createFamily(
 export async function joinFamilyWithCode(
   uid: string,
   code: string,
-): Promise<void> {
+): Promise<{ familyId: string; role: UserRole; familyName: string }> {
   const codeRef = doc(db, INVITE_CODES, code)
   const codeSnap = await getDoc(codeRef)
 
@@ -65,14 +66,17 @@ export async function joinFamilyWithCode(
   }
 
   const data = codeSnap.data()
+  const isReusable: boolean = data.reusable === true
 
-  if (data.used) {
+  if (!isReusable && data.used) {
     throw new Error('This invite code has already been used.')
   }
 
-  const now = Timestamp.now()
-  if (data.expiresAt.toMillis() < now.toMillis()) {
-    throw new Error('This invite code has expired.')
+  if (!isReusable) {
+    const now = Timestamp.now()
+    if (data.expiresAt && data.expiresAt.toMillis() < now.toMillis()) {
+      throw new Error('This invite code has expired.')
+    }
   }
 
   const familyId: string = data.familyId
@@ -80,20 +84,19 @@ export async function joinFamilyWithCode(
 
   const batch = writeBatch(db)
 
-  // Mark code as used
-  batch.update(codeRef, {
-    used: true,
-    usedBy: uid,
-    usedAt: serverTimestamp(),
-  })
+  // Only consume single-use codes; reusable (child) codes stay active until revoked
+  if (!isReusable) {
+    batch.update(codeRef, {
+      used: true,
+      usedBy: uid,
+      usedAt: serverTimestamp(),
+    })
+  }
 
-  // Add user to family memberIds
+  // Add user to family memberIds — arrayUnion avoids reading the family doc first
   const familyRef = doc(db, FAMILIES, familyId)
-  const familySnap = await getDoc(familyRef)
-  if (!familySnap.exists()) throw new Error('Family not found.')
-  const currentMembers: string[] = familySnap.data().memberIds ?? []
   batch.update(familyRef, {
-    memberIds: [...currentMembers, uid],
+    memberIds: arrayUnion(uid),
     updatedAt: serverTimestamp(),
   })
 
@@ -105,6 +108,14 @@ export async function joinFamilyWithCode(
   })
 
   await batch.commit()
+
+  // User is now a member — read family name for the success toast
+  const familySnap = await getDoc(familyRef)
+  const familyName = familySnap.exists()
+    ? (familySnap.data().name as string)
+    : 'your family'
+
+  return { familyId, role, familyName }
 }
 
 export async function generateInviteCode(
@@ -113,21 +124,24 @@ export async function generateInviteCode(
   role: UserRole,
 ): Promise<string> {
   const code = generateCode()
-  const expiresAt = Timestamp.fromMillis(
-    Date.now() + INVITE_TTL_HOURS * 60 * 60 * 1000,
-  )
+  const isReusable = role === 'child'
 
-  await setDoc(doc(db, INVITE_CODES, code), {
+  const codeData: Record<string, unknown> = {
     code,
     familyId,
     role,
     createdBy,
     createdAt: serverTimestamp(),
-    expiresAt,
     used: false,
     usedBy: null,
     usedAt: null,
-  })
+    reusable: isReusable,
+    expiresAt: isReusable
+      ? null
+      : Timestamp.fromMillis(Date.now() + INVITE_TTL_HOURS * 60 * 60 * 1000),
+  }
+
+  await setDoc(doc(db, INVITE_CODES, code), codeData)
 
   return code
 }
@@ -150,7 +164,7 @@ export async function getActiveCodes(familyId: string) {
   )
   return snap.docs
     .map((d) => d.data())
-    .filter((d) => d.expiresAt.toMillis() > now.toMillis())
+    .filter((d) => d.reusable === true || (d.expiresAt && d.expiresAt.toMillis() > now.toMillis()))
 }
 
 export async function removeMember(

@@ -47,6 +47,10 @@ export interface WeeklyChoreAssignment {
   groupName: string
   /** keyed by choreId */
   chores: Record<string, WeeklyChoreEntry>
+  /** ISO date string for the Saturday this assignment is due. */
+  expectedDueDate?: string
+  /** Set when every chore in this assignment has been verified complete by a parent. */
+  completedAt?: Timestamp | null
 }
 
 export interface WeeklyChoreDoc {

@@ -8,6 +8,7 @@ import {
   BookOpen,
   Settings,
   LogOut,
+  House,
 } from 'lucide-react'
 import { signOut } from 'firebase/auth'
 import { auth } from '@/shared/lib/firebase'
@@ -35,8 +36,9 @@ export function AppShell() {
         <div className="flex h-14 items-center border-b border-sidebar-border px-4">
           <NavLink
             to="/home"
-            className="text-xl font-semibold text-primary transition-opacity hover:opacity-70"
+            className="flex items-center gap-2 text-xl font-semibold text-primary transition-opacity hover:opacity-70"
           >
+            <House className="h-5 w-5 shrink-0" />
             Haven
           </NavLink>
         </div>

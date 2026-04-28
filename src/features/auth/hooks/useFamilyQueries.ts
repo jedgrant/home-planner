@@ -61,7 +61,7 @@ export function useActiveCodes(familyId: string | null) {
       )
       return snap.docs
         .map((d) => d.data() as InviteCode)
-        .filter((d) => d.expiresAt.toMillis() > now.toMillis())
+        .filter((d) => d.reusable === true || (d.expiresAt != null && d.expiresAt.toMillis() > now.toMillis()))
     },
   })
 }

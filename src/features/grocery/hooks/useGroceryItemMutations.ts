@@ -119,5 +119,12 @@ export function useGroceryItemMutations(familyId: string) {
     },
   })
 
-  return { addItem, editItem, completeItem, uncompleteItem, removeItem }
+  const moveItem = useMutation({
+    mutationFn: async ({ itemId, newStoreId }: { itemId: string; newStoreId: string }) => {
+      const ref = doc(db, groceryItemsPath(familyId), itemId)
+      await updateDoc(ref, { storeId: newStoreId, updatedAt: serverTimestamp() })
+    },
+  })
+
+  return { addItem, editItem, completeItem, uncompleteItem, removeItem, moveItem }
 }

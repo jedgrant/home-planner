@@ -1,15 +1,26 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { MoreHorizontal, Pencil, Trash2, ShoppingCart } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/shared/components/ui/card'
-import { Button } from '@/shared/components/ui/button'
-import { Badge } from '@/shared/components/ui/badge'
+import { useRef, useState } from "react";
+import { Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useDroppable } from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/shared/components/ui/dropdown-menu'
+} from "@/shared/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,41 +30,83 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/shared/components/ui/alert-dialog'
-import { AddEditStoreDialog } from './AddEditStoreDialog'
-import { usePendingItemCount } from '../hooks/usePendingItemCount'
-import type { Store } from '@/shared/types/grocery'
+} from "@/shared/components/ui/alert-dialog";
+import { AddEditStoreDialog } from "./AddEditStoreDialog";
+import { CardGroceryItemRow } from "./CardGroceryItemRow";
+import { useGroceryItemMutations } from "../hooks/useGroceryItemMutations";
+import { useAuthStore } from "@/shared/lib/authStore";
+import { cn } from "@/shared/lib/utils";
+import type { Store, GroceryItem } from "@/shared/types/grocery";
 
 interface StoreCardProps {
-  store: Store
-  familyId: string
-  isParent: boolean
-  onEdit: (name: string, notes: string) => Promise<void>
-  onRemove: () => Promise<void>
+  store: Store;
+  items: GroceryItem[];
+  isParent: boolean;
+  onEdit: (name: string, notes: string) => Promise<void>;
+  onRemove: () => Promise<void>;
 }
 
 export function StoreCard({
   store,
-  familyId,
+  items,
   isParent,
   onEdit,
   onRemove,
 }: StoreCardProps) {
-  const navigate = useNavigate()
-  const pendingCount = usePendingItemCount(familyId, store.storeId)
-  const [editOpen, setEditOpen] = useState(false)
-  const [removeOpen, setRemoveOpen] = useState(false)
+  const user = useAuthStore((s) => s.user);
+  const familyId = user?.familyId ?? "";
+  const { addItem, editItem, completeItem, removeItem } =
+    useGroceryItemMutations(familyId);
+
+  const { setNodeRef, isOver } = useDroppable({ id: store.storeId });
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [addName, setAddName] = useState("");
+  const addInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleAdd() {
+    const name = addName.trim();
+    if (!name || !user) return;
+    await addItem.mutateAsync({
+      name,
+      quantity: "1",
+      note: "",
+      storeId: store.storeId,
+      addedBy: user.uid,
+    });
+    setAddName("");
+    addInputRef.current?.focus();
+  }
 
   return (
     <>
-      <Card className="rounded-xl shadow-sm">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold">{store.name}</CardTitle>
+      <Card
+        className={cn(
+          "rounded-xl flex flex-col transition-all pt-2.5",
+          isOver && "ring-2 ring-primary/40 shadow-md",
+        )}
+      >
+        {/* Header */}
+        <CardHeader className="">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <CardTitle className="text-base font-bold truncate">
+                {store.name}
+              </CardTitle>
+              {items.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="rounded-full text-xs tabular-nums shrink-0"
+                >
+                  {items.length}
+                </Badge>
+              )}
+            </div>
             {isParent && (
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground/50 hover:bg-muted hover:text-foreground transition-colors shrink-0"
                   aria-label="Store options"
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -75,25 +128,74 @@ export function StoreCard({
             )}
           </div>
           {store.notes && (
-            <CardDescription className="text-xs">{store.notes}</CardDescription>
+            <p className="text-xs text-muted-foreground">{store.notes}</p>
           )}
         </CardHeader>
-        <CardContent className="pb-2">
-          {pendingCount !== null && pendingCount > 0 ? (
-            <Badge variant="secondary" className="rounded-full text-xs">
-              {pendingCount} item{pendingCount !== 1 ? 's' : ''} needed
-            </Badge>
-          ) : (
-            <span className="text-xs text-muted-foreground">No items pending</span>
-          )}
+
+        <CardContent className="flex-1 flex flex-col py-0">
+          {/* Droppable + sortable item list */}
+          <div ref={setNodeRef} className="min-h-8">
+            <SortableContext
+              items={items.map((i) => i.itemId)}
+              strategy={verticalListSortingStrategy}
+            >
+              {items.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center italic">
+                  No items yet — add one below
+                </p>
+              ) : (
+                <div className="max-h-72 overflow-y-auto -mr-1 pr-1">
+                  {items.map((item) => (
+                    <CardGroceryItemRow
+                      key={item.itemId}
+                      item={item}
+                      onComplete={() => {
+                        if (!user) return;
+                        completeItem.mutate({
+                          itemId: item.itemId,
+                          itemName: item.name,
+                          quantity: item.quantity,
+                          store,
+                          completedBy: user.uid,
+                        });
+                      }}
+                      onEdit={(name, qty, note) =>
+                        editItem.mutateAsync({
+                          itemId: item.itemId,
+                          name,
+                          quantity: qty,
+                          note,
+                        })
+                      }
+                      onRemove={() => removeItem.mutate(item.itemId)}
+                    />
+                  ))}
+                </div>
+              )}
+            </SortableContext>
+          </div>
+
+          
         </CardContent>
         <CardFooter>
+          <Input
+            ref={addInputRef}
+            value={addName}
+            onChange={(e) => setAddName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleAdd();
+            }}
+            placeholder="Add item…"
+            className="h-8 text-sm"
+          />
           <Button
-            className="w-full"
-            onClick={() => navigate(`/grocery/${store.storeId}`)}
+            size="sm"
+            onClick={handleAdd}
+            disabled={!addName.trim() || addItem.isPending}
+            className="h-8 px-3 shrink-0"
+            aria-label="Add item"
           >
-            <ShoppingCart className="mr-2 h-4 w-4" />
-            Shop
+            <Plus className="h-4 w-4" />
           </Button>
         </CardFooter>
       </Card>
@@ -110,21 +212,16 @@ export function StoreCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Remove {store.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              The store will be archived. All items and history are kept, but this store
-              won't appear as an active option.
+              The store will be archived. All items and history are kept but
+              this store won't appear as an active option.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={onRemove}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Remove
-            </AlertDialogAction>
+            <AlertDialogAction onClick={onRemove}>Remove</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
-  )
+  );
 }

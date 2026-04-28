@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Pencil, Sparkles, Archive, Globe, Lock } from 'lucide-react'
+import { ArrowLeft, Sparkles, Archive, Globe, Lock, CheckCircle2, Loader2 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
@@ -60,25 +60,50 @@ export function RecipeDetailPage() {
 
   const { data: stores = [] } = useStores(familyId)
 
-  const [isEditing, setIsEditing] = useState(false)
-  const [editIngredients, setEditIngredients] = useState<Ingredient[]>([])
-  const [editTasks, setEditTasks] = useState<PrepTask[]>([])
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]) // seeded from recipe below
+  const [tasks, setTasks] = useState<PrepTask[]>([])
+  const [seeded, setSeeded] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [showArchiveDialog, setShowArchiveDialog] = useState(false)
 
-  function startEditing() {
-    if (!recipe) return
-    setEditIngredients(recipe.ingredients)
-    setEditTasks(recipe.prepTasks)
-    setIsEditing(true)
+  // Seed local state once the recipe loads
+  if (recipe && !seeded) {
+    setIngredients(recipe.ingredients)
+    setTasks(recipe.prepTasks)
+    setSeeded(true)
   }
 
-  async function saveEdits() {
-    if (!recipe) return
-    await updateMutation.mutateAsync({
-      recipeId: recipe.recipeId,
-      changes: { ingredients: editIngredients, prepTasks: editTasks },
-    })
-    setIsEditing(false)
+  const saveToFirestore = useCallback(
+    async (nextIngredients: Ingredient[], nextTasks: PrepTask[]) => {
+      if (!recipe) return
+      setSaveStatus('saving')
+      try {
+        await updateMutation.mutateAsync({
+          recipeId: recipe.recipeId,
+          changes: { ingredients: nextIngredients, prepTasks: nextTasks },
+        })
+        setSaveStatus('saved')
+        setTimeout(() => setSaveStatus('idle'), 2000)
+      } catch {
+        setSaveStatus('idle')
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [recipe?.recipeId, familyId],
+  )
+
+  function handleIngredientsChange(next: Ingredient[]) {
+    setIngredients(next)
+    void saveToFirestore(next, tasks)
+  }
+
+  function handleTasksChange(next: PrepTask[]) {
+    setTasks(next)
+  }
+
+  function handleTasksSave(next: PrepTask[]) {
+    setTasks(next)
+    void saveToFirestore(ingredients, next)
   }
 
   async function handleAISuggestTasks() {
@@ -91,14 +116,16 @@ export function RecipeDetailPage() {
       })),
       notes: recipe.description,
     })
-    const startOrder = editTasks.length
+    const startOrder = tasks.length
     const newTasks: PrepTask[] = result.prepTasks.map((t, i) => ({
       taskId: nanoid(),
       description: t.description,
       difficulty: t.difficulty,
       order: startOrder + i,
     }))
-    setEditTasks((prev) => [...prev, ...newTasks])
+    const next = [...tasks, ...newTasks]
+    setTasks(next)
+    void saveToFirestore(ingredients, next)
   }
 
   async function handleArchive() {
@@ -165,56 +192,46 @@ export function RecipeDetailPage() {
         </div>
 
         {isParent && !isGlobalView && (
-          <div className="flex gap-2">
-            {!isEditing && (
-              <>
-                <Button variant="outline" size="sm" onClick={startEditing}>
-                  <Pencil className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleToggleVisibility}
-                  disabled={visibilityMutation.isPending}
-                >
-                  {recipe.visibility === 'global' ? (
-                    <>
-                      <Lock className="h-4 w-4 mr-1" />
-                      Make Private
-                    </>
-                  ) : (
-                    <>
-                      <Globe className="h-4 w-4 mr-1" />
-                      Share Globally
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => setShowArchiveDialog(true)}
-                >
-                  <Archive className="h-4 w-4 mr-1" />
-                  Archive
-                </Button>
-              </>
+          <div className="flex items-center gap-2">
+            {saveStatus === 'saving' && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Saving…
+              </span>
             )}
-            {isEditing && (
-              <>
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={saveEdits}
-                  disabled={updateMutation.isPending}
-                >
-                  {updateMutation.isPending ? 'Saving…' : 'Save'}
-                </Button>
-              </>
+            {saveStatus === 'saved' && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                Saved
+              </span>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleVisibility}
+              disabled={visibilityMutation.isPending}
+            >
+              {recipe.visibility === 'global' ? (
+                <>
+                  <Lock className="h-4 w-4 mr-1" />
+                  Make Private
+                </>
+              ) : (
+                <>
+                  <Globe className="h-4 w-4 mr-1" />
+                  Share Globally
+                </>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => setShowArchiveDialog(true)}
+            >
+              <Archive className="h-4 w-4 mr-1" />
+              Archive
+            </Button>
           </div>
         )}
       </div>
@@ -229,13 +246,13 @@ export function RecipeDetailPage() {
       {/* Ingredients */}
       <section className="mt-6">
         <h2 className="text-sm font-semibold text-foreground mb-2">
-          Ingredients ({(isEditing ? editIngredients : recipe.ingredients).length})
+          Ingredients ({ingredients.length})
         </h2>
         <RecipeIngredientEditor
-          ingredients={isEditing ? editIngredients : recipe.ingredients}
-          onChange={setEditIngredients}
+          ingredients={ingredients}
+          onChange={handleIngredientsChange}
           stores={stores}
-          disabled={!isEditing}
+          disabled={!isParent || isGlobalView}
         />
       </section>
 
@@ -243,9 +260,9 @@ export function RecipeDetailPage() {
       <section className="mt-6">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-semibold text-foreground">
-            Prep Tasks ({(isEditing ? editTasks : recipe.prepTasks).length})
+            Prep Tasks ({tasks.length})
           </h2>
-          {isEditing && isParent && (
+          {isParent && !isGlobalView && (
             <Button
               type="button"
               variant="outline"
@@ -259,9 +276,10 @@ export function RecipeDetailPage() {
           )}
         </div>
         <RecipePrepTaskEditor
-          tasks={isEditing ? editTasks : recipe.prepTasks}
-          onChange={setEditTasks}
-          disabled={!isEditing}
+          tasks={tasks}
+          onChange={handleTasksChange}
+          onSave={handleTasksSave}
+          disabled={!isParent || isGlobalView}
         />
       </section>
 

@@ -49,10 +49,10 @@ export function ChoreManagePage() {
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Manage Chores</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-3xl font-semibold text-foreground">Manage Chores</h1>
+          {/* <p className="text-sm text-muted-foreground mt-0.5">
             {groups?.length ?? 0} group{groups?.length !== 1 ? 's' : ''}
-          </p>
+          </p> */}
         </div>
         <Button onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4 mr-1" />
