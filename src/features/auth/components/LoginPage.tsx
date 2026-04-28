@@ -21,6 +21,7 @@ import {
   CardDescription,
 } from '@/shared/components/ui/card'
 import { signIn } from '../authFunctions'
+import splashImg from '@/assets/haven-splash.png'
 
 const schema = z.object({
   email: z.string().email('Enter a valid email.'),
@@ -49,79 +50,92 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm rounded-xl shadow-sm">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-xl font-semibold">Sign in</CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            Welcome back to Home Manager
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="you@example.com"
-                        autoComplete="email"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        autoComplete="current-password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {serverError && (
-                <p className="text-xs font-medium text-destructive">{serverError}</p>
-              )}
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={form.formState.isSubmitting}
-              >
-                {form.formState.isSubmitting ? 'Signing in…' : 'Sign in'}
-              </Button>
-            </form>
-          </Form>
-          <div className="mt-4 space-y-2 text-center text-sm text-muted-foreground">
-            <p>
-              <Link to="/register" className="text-primary hover:underline">
-                Create an account
-              </Link>
-            </p>
-            <p>
-              <Link to="/reset-password" className="hover:underline">
-                Forgot your password?
-              </Link>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
+      {/* Splash image + overlapping form */}
+      <div className="relative w-full max-w-275 shadow-md rounded-2xl overflow-hidden">
+        {/* Splash image */}
+        <img
+          src={splashImg}
+          alt="Haven — Helping at home"
+          className="w-full object-cover"
+        />
+
+        {/* Sign-in card overlapping the image */}
+        <div className="absolute inset-0 flex items-center justify-center pt-40">
+          <Card className="w-full max-w-xs rounded-xl bg-background/80 shadow-md backdrop-blur-sm">
+            <CardHeader className="space-y-1 pb-4">
+              <CardTitle className="text-xl font-semibold -mb-0.5">Sign in</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                Welcome back to Haven
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="you@example.com"
+                            autoComplete="email"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="••••••••"
+                            autoComplete="current-password"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  {serverError && (
+                    <p className="text-xs font-medium text-destructive">{serverError}</p>
+                  )}
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={form.formState.isSubmitting}
+                  >
+                    {form.formState.isSubmitting ? 'Signing in…' : 'Sign in'}
+                  </Button>
+                </form>
+              </Form>
+              <div className="mt-4 space-y-2 text-center text-sm text-muted-foreground">
+                <p>
+                  <Link to="/register" className="text-primary hover:underline">
+                    Create an account
+                  </Link>
+                </p>
+                <p>
+                  <Link to="/reset-password" className="hover:underline">
+                    Forgot your password?
+                  </Link>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }

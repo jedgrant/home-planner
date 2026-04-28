@@ -303,37 +303,37 @@ families/{familyId}/aggregates/purchasePatterns — per-item purchase frequency 
 
 ### 4.1 shadcn/ui Components to Install
 
-- ⬜ `command` (for searchable select / combobox), `sheet` (mobile list pane), `switch`
+- ✅ `command` (for searchable select / combobox), `sheet` (mobile list pane), `switch`
 
 ### 4.2 Store Management
 
-- ⬜ `GroceryPage` — list of stores, each as a card with item count and "Shop" CTA
-- ⬜ Add / edit / remove store (parent only, with confirmation for remove)
+- ✅ `GroceryPage` — list of stores, each as a card with item count and "Shop" CTA
+- ✅ Add / edit / remove store (parent only, with confirmation for remove)
 
 ### 4.3 Shared Combobox Component
 
-- ⬜ `src/shared/components/Combobox.tsx` — reusable searchable select, used for item name + store field throughout grocery and meal sections
+- ✅ `src/shared/components/Combobox.tsx` — reusable searchable select, used for item name + store field throughout grocery and meal sections
 
 ### 4.4 Shopping List
 
-- ⬜ `StoreListPage` — real-time `onSnapshot` on `groceryItems` filtered by storeId + not-completed
-- ⬜ Add item form — name (combobox from history), quantity, note
-- ⬜ `GroceryItemRow` — checkbox, name, quantity, note; check-off writes completedAt + completedBy
-- ⬜ Completed items section — collapsible, shows with strikethrough; any member can uncheck
-- ⬜ Parent-only edit + remove item actions
-- ⬜ Pending item count badge on store card
+- ✅ `StoreListPage` — real-time `onSnapshot` on `groceryItems` filtered by storeId + not-completed
+- ✅ Add item form — name (combobox from history), quantity, note
+- ✅ `GroceryItemRow` — checkbox, name, quantity, note; check-off writes completedAt + completedBy
+- ✅ Completed items section — collapsible, shows with strikethrough; any member can uncheck
+- ✅ Parent-only edit + remove item actions
+- ✅ Pending item count badge on store card
 
 ### 4.5 Quick Pick
 
-- ⬜ `QuickPickSheet` — slides up on "Quick Pick" button tap; per-store list of saved quick-pick items
-- ⬜ Search/filter within quick-pick list
-- ⬜ Tap to add (pre-populates name, quantity, note; user can adjust before confirming)
-- ⬜ Multi-select + "Add Selected" action
-- ⬜ Parent-only: add, edit, remove quick-pick items
+- ✅ `QuickPickSheet` — slides up on "Quick Pick" button tap; per-store list of saved quick-pick items
+- ✅ Search/filter within quick-pick list
+- ✅ Tap to add (pre-populates name, quantity, note; user can adjust before confirming)
+- ✅ Multi-select + "Add Selected" action
+- ✅ Parent-only: add, edit, remove quick-pick items
 
 ### 4.6 Purchase Pattern Aggregation
 
-- ⬜ Firestore trigger (or client-side write) on item completion → updates `aggregates/purchasePatterns` doc
+- ✅ Firestore trigger (or client-side write) on item completion → updates `aggregates/purchasePatterns` doc
   - Recalculates `avgDaysBetweenPurchases` and updates `lastPurchasedAt` for that item
   - Create entry if first purchase; update if existing
 
@@ -353,41 +353,41 @@ families/{familyId}/aggregates/purchasePatterns — per-item purchase frequency 
 
 ### 5.1 shadcn/ui Components to Install
 
-- ⬜ `tabs`, `badge`, `textarea`, `tooltip`, `collapsible`
-- ⬜ Install drag-and-drop: `@dnd-kit/core` + `@dnd-kit/sortable` (for prep task ordering)
+- ✅ `tabs`, `badge`, `textarea`, `tooltip`, `collapsible`
+- ✅ Install drag-and-drop: `@dnd-kit/core` + `@dnd-kit/sortable` (for prep task ordering)
 
 ### 5.2 Recipe Book Page
 
-- ⬜ `RecipeBookPage` — tabs: "Our Recipes" (family) and "Global Library"
-- ⬜ Filter by course type (Entrée, Side, Salad, Fruit, Dessert)
-- ⬜ Search by name (client-side filter on loaded list)
-- ⬜ `RecipeCard` — name, course type badge, ingredient count, task count
+- ✅ `RecipeBookPage` — tabs: "Our Recipes" (family) and "Global Library"
+- ✅ Filter by course type (Entrée, Side, Salad, Fruit, Dessert)
+- ✅ Search by name (client-side filter on loaded list)
+- ✅ `RecipeCard` — name, course type badge, ingredient count, task count
 
 ### 5.3 Recipe Detail & Edit
 
-- ⬜ `RecipeDetailPage` — full recipe view: description, servings, ingredients, prep tasks
-- ⬜ `RecipeEditPage` (or inline editing) — all fields editable by parents
-- ⬜ Ingredient list management — add, edit, remove; name uses combobox from history
-- ⬜ Store association per ingredient — combobox from family's configured stores
-- ⬜ Prep task list management — add, edit, remove, drag-to-reorder, difficulty selector
-- ⬜ Archive recipe (confirmation, checks for future meal references)
-- ⬜ Promote to global / demote to private (parent only)
+- ✅ `RecipeDetailPage` — full recipe view: description, servings, ingredients, prep tasks
+- ✅ `RecipeEditPage` (or inline editing) — all fields editable by parents
+- ✅ Ingredient list management — add, edit, remove; name uses combobox from history
+- ✅ Store association per ingredient — combobox from family's configured stores
+- ✅ Prep task list management — add, edit, remove, drag-to-reorder, difficulty selector
+- ✅ Archive recipe (confirmation, checks for future meal references)
+- ✅ Promote to global / demote to private (parent only)
 
 ### 5.4 Global Recipe Library
 
-- ⬜ Browse `globalRecipes` collection — read-only view
-- ⬜ "Save to My Recipes" — forks global recipe into `families/{familyId}/recipes/` with `sourceGlobalRecipeId` set
+- ✅ Browse `globalRecipes` collection — read-only view
+- ✅ "Save to My Recipes" — forks global recipe into `families/{familyId}/recipes/` with `sourceGlobalRecipeId` set
 
 ### 5.5 AI: Suggest Recipe (Cloud Function)
 
-- ⬜ Cloud Function `suggestRecipe(recipeName: string)` → calls Gemini, returns `{ description, ingredients, prepTasks }`
-- ⬜ "AI Suggest Recipe" button on new recipe form — calls function, populates preview fields
-- ⬜ User edits preview then saves — never auto-applies
+- ✅ Cloud Function `suggestRecipe(recipeName: string)` → calls Gemini, returns `{ description, ingredients, prepTasks }`
+- ✅ "AI Suggest Recipe" button on new recipe form — calls function, populates preview fields
+- ✅ User edits preview then saves — never auto-applies
 
 ### 5.6 AI: Suggest Tasks (Cloud Function)
 
-- ⬜ Cloud Function `suggestTasks({ recipeName, ingredients, notes })` → returns `PrepTask[]`
-- ⬜ "Suggest Tasks" button on recipe edit — calls function, appends to existing task list as editable preview
+- ✅ Cloud Function `suggestTasks({ recipeName, ingredients, notes })` → returns `PrepTask[]`
+- ✅ "Suggest Tasks" button on recipe edit — calls function, appends to existing task list as editable preview
 
 ### 5.7 Verify
 
@@ -495,7 +495,7 @@ families/{familyId}/aggregates/purchasePatterns — per-item purchase frequency 
 | 1 — TypeScript Interfaces | ⬜ Not Started | |
 | 2 — Auth / Registration / Family / Profiles | ⬜ Not Started | |
 | 3 — Chores / Groups / Rotation / Seed Data | ⬜ Not Started | |
-| 4 — Grocery Shopping | ⬜ Not Started | |
-| 5 — Family Recipe Book | ⬜ Not Started | |
+| 4 — Grocery Shopping | 🔄 In Progress | Implementation complete; 4.7 verify tasks remain |
+| 5 — Family Recipe Book | 🔄 In Progress | Implementation complete; 5.7 verify tasks remain |
 | 6 — Meal Planner | ⬜ Not Started | |
 | 7 — AI Features (Grocery) | ⬜ Not Started | |

@@ -9,14 +9,18 @@
     "storage": {
       "port": 19199
     },
-    "functions": {
-      "port": 15001
-    },
     "ui": {
       "enabled": true,
       "port": 14000
     }
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log"]
+    }
+  ],
   "firestore": {
     "rules": "firestore.rules"
   },

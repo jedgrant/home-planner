@@ -10,30 +10,30 @@
 
 Home Manager should feel like it belongs on the countertop of a well-designed kitchen — calm, intentional, and uncluttered. The visual language is **warm minimalism**: generous whitespace, soft neutral tones, and restrained use of color so that the content (names, tasks, lists) is always the focal point. Nothing should feel clinical or corporate, but nothing should feel playful or juvenile either. The app needs to serve a six-year-old checking off a chore and a parent reviewing the week's meal plan with equal comfort.
 
-**Three words to calibrate against:** Calm. Warm. Considered.
+**Three words to calibrate against:** Calm. Fresh. Considered.
 
 ---
 
 ## Color Palette
 
-The palette is built on warm off-whites and soft neutrals, with a single restrained accent used sparingly for primary actions.
+The palette is anchored in the Haven brand's sage green, set against pale mint-tinted surfaces. The result is calm and nature-grounded without being clinical. All neutral tones carry a subtle green hue to stay coherent with the primary.
 
-| Role | Description | Example Value |
+| Role | Description | Approx Value |
 |---|---|---|
-| **Background** | Warm off-white; never pure white | `#FAF9F7` |
-| **Surface** | Cards, panels, modals — slightly warmer than background | `#F4F2EE` |
-| **Border / Divider** | Soft warm gray | `#E5E2DC` |
-| **Text — Primary** | Deep warm charcoal; avoid pure black | `#1C1917` |
-| **Text — Secondary** | Medium warm gray for captions, metadata | `#78716C` |
-| **Text — Disabled / Placeholder** | Light warm gray | `#A8A29E` |
-| **Accent (Primary Action)** | A single muted warm tone — earthy terracotta or dusty sage; pick one. | e.g., `#B45309` (amber-700) or `#4A7C59` (sage) |
-| **Accent — Hover / Pressed** | Darkened version of accent | ~15% darker |
-| **Destructive** | Muted red; not aggressive | `#B91C1C` |
-| **Success** | Muted green; completion states | `#15803D` |
+| **Background** | Pale mint off-white; barely-there sage tint | `oklch(0.982 0.007 155)` ≈ `#F3FAF6` |
+| **Surface** | Cards, panels, modals — slightly richer mint | `oklch(0.960 0.009 155)` ≈ `#EAF5EF` |
+| **Border / Divider** | Soft sage-tinted gray | `oklch(0.908 0.012 155)` ≈ `#D6E8DC` |
+| **Text — Primary** | Deep green-charcoal; avoid pure black | `oklch(0.160 0.012 155)` ≈ `#111F17` |
+| **Text — Secondary** | Medium sage-gray for captions, metadata | `oklch(0.510 0.018 155)` ≈ `#5A7A65` |
+| **Text — Disabled / Placeholder** | Light sage-gray | `oklch(0.670 0.012 155)` |
+| **Accent (Primary Action)** | Haven sage green — the brand logo color | `oklch(0.52 0.145 155)` ≈ `#2E8A56` |
+| **Accent — Hover / Pressed** | Darkened version of accent | `oklch(0.44 0.145 155)` ≈ ~15% darker |
+| **Destructive** | Muted red; not aggressive | `oklch(0.45 0.16 27)` ≈ `#B91C1C` |
+| **Success** | Matches primary (sage green is already success-coded) | same as primary |
 
-> **Accent choice:** Select one accent and use it consistently. Terracotta/amber reads warmer and more rustic; sage reads cleaner and more contemporary. Either works — commit to one.
+> **Accent choice:** The Haven logo's sage green (`oklch(0.52 0.145 155)`) is the single committed accent. It reads contemporary and nature-grounded. Do not introduce amber, ochre, or terracotta alongside it — they conflict with the brand hue.
 
-Dark mode should use the same warm neutrals inverted (deep warm charcoal backgrounds, not cold grays).
+Dark mode uses the same green hue axis inverted: deep sage-charcoal backgrounds (`oklch(0.160 0.012 155)`) and a brightened primary (`oklch(0.63 0.145 155)`) for legibility.
 
 ---
 
@@ -97,5 +97,6 @@ Rationale for AI coding agents:
 - Set `cssVariables: true` in the shadcn config so the palette above can be applied via CSS custom properties and swapped cleanly for dark mode.
 - Override the default shadcn radius to `0.5rem` (8px) to match this spec.
 - Set the Tailwind `fontFamily.sans` to `['Inter', 'sans-serif']`.
-- The accent color should be mapped to shadcn's `primary` token; status colors (success, destructive) map to their respective tokens.
+- The accent color (Haven sage green, hue 155 on the oklch wheel) is mapped to shadcn's `primary` token. All neutral surface tokens carry the same hue axis at very low chroma so they harmonise.
+- Status colors (destructive) map to their respective tokens. Success can reuse `primary` since sage green is already success-coded.
 - Lucide React is included by default in shadcn/ui setups — no additional icon library is needed.

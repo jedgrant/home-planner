@@ -1,1 +1,2 @@
-// src/features/grocery
+export { GroceryPage } from './components/GroceryPage'
+export { StoreListPage } from './components/StoreListPage'

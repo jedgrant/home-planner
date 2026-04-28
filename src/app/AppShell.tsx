@@ -1,8 +1,10 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { SectionErrorBoundary } from './SectionErrorBoundary'
 import {
   CheckSquare,
   ShoppingCart,
   UtensilsCrossed,
+  BookOpen,
   Settings,
   LogOut,
 } from 'lucide-react'
@@ -12,12 +14,14 @@ import { useAuthStore } from '@/shared/lib/authStore'
 
 const navItems = [
   { to: '/chores', label: 'Chores', icon: CheckSquare },
-  { to: '/grocery', label: 'Grocery', icon: ShoppingCart },
-  { to: '/meals', label: 'Meals', icon: UtensilsCrossed },
+  { to: '/grocery', label: 'Grocery list', icon: ShoppingCart },
+  { to: '/meals', label: 'Meals', icon: UtensilsCrossed, end: true },
+  { to: '/meals/recipes', label: 'Recipes', icon: BookOpen },
 ]
 
 export function AppShell() {
   const { user } = useAuthStore()
+  const { pathname } = useLocation()
 
   const handleSignOut = () => signOut(auth)
 
@@ -27,17 +31,21 @@ export function AppShell() {
       <aside className="flex w-56 flex-col border-r border-border bg-sidebar">
         {/* Logo */}
         <div className="flex h-14 items-center border-b border-sidebar-border px-4">
-          <span className="text-sm font-semibold text-sidebar-foreground">
-            Home Manager
-          </span>
+          <NavLink
+            to="/home"
+            className="text-xl font-semibold text-primary transition-opacity hover:opacity-70"
+          >
+            Haven
+          </NavLink>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 space-y-1 p-3">
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {navItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
+              end={end}
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                   isActive
@@ -92,7 +100,9 @@ export function AppShell() {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
-        <Outlet />
+        <SectionErrorBoundary resetKey={pathname}>
+          <Outlet />
+        </SectionErrorBoundary>
       </main>
     </div>
   )

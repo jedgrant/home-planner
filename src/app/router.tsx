@@ -16,11 +16,12 @@ import { RecipeBookPage } from '@/features/meals/components/RecipeBookPage'
 import { RecipeDetailPage } from '@/features/meals/components/RecipeDetailPage'
 import { MealDetailPage } from '@/features/meals/components/MealDetailPage'
 import { ProfilePage } from '@/features/profiles/components/ProfilePage'
+import { HomePage } from './pages/HomePage'
 
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <Navigate to="/chores" replace />,
+    element: <Navigate to="/home" replace />,
   },
   {
     path: '/login',
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([
           {
             element: <AppShell />,
             children: [
+              { path: '/home', element: <HomePage /> },
               { path: '/chores', element: <ChoresPage /> },
               { path: '/chores/manage', element: <ChoreManagePage /> },
               { path: '/grocery', element: <GroceryPage /> },
