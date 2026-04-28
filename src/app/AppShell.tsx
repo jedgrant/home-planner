@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { SectionErrorBoundary } from './SectionErrorBoundary'
 import {
+  LayoutDashboard,
   CheckSquare,
   ShoppingCart,
   UtensilsCrossed,
@@ -13,6 +14,7 @@ import { auth } from '@/shared/lib/firebase'
 import { useAuthStore } from '@/shared/lib/authStore'
 
 const navItems = [
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/chores', label: 'Chores', icon: CheckSquare },
   { to: '/grocery', label: 'Grocery list', icon: ShoppingCart },
   { to: '/meals', label: 'Meals', icon: UtensilsCrossed, end: true },
