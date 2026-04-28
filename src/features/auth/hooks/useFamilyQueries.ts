@@ -1,0 +1,67 @@
+import { useQuery } from '@tanstack/react-query'
+import { doc, getDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore'
+import { db } from '@/shared/lib/firebase'
+import { FAMILIES, USERS, INVITE_CODES } from '@/shared/lib/collections'
+import type { UserProfile, Family, InviteCode } from '@/shared/types'
+
+export function useFamily(familyId: string | null) {
+  return useQuery<Family | null>({
+    queryKey: ['family', familyId],
+    enabled: !!familyId,
+    queryFn: async () => {
+      const snap = await getDoc(doc(db, FAMILIES, familyId!))
+      if (!snap.exists()) return null
+      return { ...snap.data(), familyId: snap.id } as Family
+    },
+  })
+}
+
+export function useFamilyMembers(familyId: string | null) {
+  return useQuery<UserProfile[]>({
+    queryKey: ['familyMembers', familyId],
+    enabled: !!familyId,
+    queryFn: async () => {
+      const familySnap = await getDoc(doc(db, FAMILIES, familyId!))
+      if (!familySnap.exists()) return []
+      const memberIds: string[] = familySnap.data().memberIds ?? []
+      const docs = await Promise.all(
+        memberIds.map((id) => getDoc(doc(db, USERS, id))),
+      )
+      return docs
+        .filter((d) => d.exists())
+        .map((d) => ({ ...d.data(), userId: d.id }) as UserProfile)
+    },
+  })
+}
+
+export function useUserProfile(uid: string | null) {
+  return useQuery<UserProfile | null>({
+    queryKey: ['userProfile', uid],
+    enabled: !!uid,
+    queryFn: async () => {
+      const snap = await getDoc(doc(db, USERS, uid!))
+      if (!snap.exists()) return null
+      return { ...snap.data(), userId: snap.id } as UserProfile
+    },
+  })
+}
+
+export function useActiveCodes(familyId: string | null) {
+  return useQuery<InviteCode[]>({
+    queryKey: ['activeCodes', familyId],
+    enabled: !!familyId,
+    queryFn: async () => {
+      const now = Timestamp.now()
+      const snap = await getDocs(
+        query(
+          collection(db, INVITE_CODES),
+          where('familyId', '==', familyId!),
+          where('used', '==', false),
+        ),
+      )
+      return snap.docs
+        .map((d) => d.data() as InviteCode)
+        .filter((d) => d.expiresAt.toMillis() > now.toMillis())
+    },
+  })
+}

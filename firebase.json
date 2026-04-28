@@ -1,0 +1,26 @@
+{
+  "emulators": {
+    "auth": {
+      "port": 19099
+    },
+    "firestore": {
+      "port": 18080
+    },
+    "storage": {
+      "port": 19199
+    },
+    "functions": {
+      "port": 15001
+    },
+    "ui": {
+      "enabled": true,
+      "port": 14000
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

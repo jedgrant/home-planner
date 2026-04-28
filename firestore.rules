@@ -1,0 +1,109 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+
+    function callerFamilyId() {
+      return getUserData(request.auth.uid).familyId;
+    }
+
+    function isParent() {
+      return isSignedIn() &&
+        getUserData(request.auth.uid).role == 'parent';
+    }
+
+    function isFamilyMember(familyId) {
+      return isSignedIn() &&
+        callerFamilyId() == familyId;
+    }
+
+    // ─── Users ───────────────────────────────────────────────────────────────
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isUser(userId);
+      allow update: if isUser(userId) || isParent();
+      allow delete: if false;
+    }
+
+    // ─── Invite codes ────────────────────────────────────────────────────────
+
+    match /inviteCodes/{code} {
+      allow read: if isSignedIn();
+      allow create: if isParent();
+      allow update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    // ─── Families ────────────────────────────────────────────────────────────
+
+    match /families/{familyId} {
+      allow read: if isFamilyMember(familyId);
+      allow create: if isSignedIn();
+      allow update: if isFamilyMember(familyId);
+      allow delete: if false;
+
+      match /choreGroups/{groupId} {
+        allow read: if isFamilyMember(familyId);
+        allow write: if isFamilyMember(familyId) && isParent();
+      }
+
+      match /weeklyChores/{weekId} {
+        allow read: if isFamilyMember(familyId);
+        allow write: if isFamilyMember(familyId);
+      }
+
+      match /stores/{storeId} {
+        allow read: if isFamilyMember(familyId);
+        allow write: if isFamilyMember(familyId) && isParent();
+      }
+
+      match /groceryItems/{itemId} {
+        allow read: if isFamilyMember(familyId);
+        allow write: if isFamilyMember(familyId);
+      }
+
+      match /quickPickItems/{itemId} {
+        allow read: if isFamilyMember(familyId);
+        allow write: if isFamilyMember(familyId);
+      }
+
+      match /recipes/{recipeId} {
+        allow read: if isFamilyMember(familyId);
+        allow write: if isFamilyMember(familyId);
+      }
+
+      match /meals/{mealId} {
+        allow read: if isFamilyMember(familyId);
+        allow write: if isFamilyMember(familyId);
+      }
+
+      match /aggregates/{docId} {
+        allow read: if isFamilyMember(familyId);
+        allow write: if false;
+      }
+    }
+
+    // ─── Global recipes ──────────────────────────────────────────────────────
+
+    match /globalRecipes/{recipeId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+  }
+}
+
