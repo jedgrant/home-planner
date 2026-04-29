@@ -20,6 +20,7 @@ export function useFamilyMembers(familyId: string | null) {
   return useQuery<UserProfile[]>({
     queryKey: ['familyMembers', familyId],
     enabled: !!familyId,
+    staleTime: Infinity, // load once per session; invalidate explicitly on profile changes
     queryFn: async () => {
       const familySnap = await getDoc(doc(db, FAMILIES, familyId!))
       if (!familySnap.exists()) return []

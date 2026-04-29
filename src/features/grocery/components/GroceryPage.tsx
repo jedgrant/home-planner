@@ -160,10 +160,10 @@ export function GroceryPage() {
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-semibold text-foreground">Grocery list</h1>
+            <h1 className="text-2xl md:text-3xl font-semibold text-foreground">Grocery list</h1>
             <p className="text-sm text-muted-foreground">Manage stores and shopping lists</p>
           </div>
           {isParent && (

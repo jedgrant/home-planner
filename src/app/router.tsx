@@ -58,10 +58,38 @@ export const router = createBrowserRouter([
               { path: '/home', element: <HomePage /> },
               { path: '/dashboard', element: <DashboardPage /> },
               { path: '/child-dashboard', element: <ChildDashboardPage /> },
-              { path: '/chores', element: <ChoresPage /> },
-              { path: '/chores/manage', element: <ChoreManagePage /> },
-              { path: '/grocery', element: <GroceryPage /> },
-              { path: '/grocery/:storeId', element: <StoreListPage /> },
+              {
+                path: '/chores',
+                element: (
+                  <SectionErrorBoundary resetKey="/chores">
+                    <ChoresPage />
+                  </SectionErrorBoundary>
+                ),
+              },
+              {
+                path: '/chores/manage',
+                element: (
+                  <SectionErrorBoundary resetKey="/chores/manage">
+                    <ChoreManagePage />
+                  </SectionErrorBoundary>
+                ),
+              },
+              {
+                path: '/grocery',
+                element: (
+                  <SectionErrorBoundary resetKey="/grocery">
+                    <GroceryPage />
+                  </SectionErrorBoundary>
+                ),
+              },
+              {
+                path: '/grocery/:storeId',
+                element: (
+                  <SectionErrorBoundary resetKey="/grocery/:storeId">
+                    <StoreListPage />
+                  </SectionErrorBoundary>
+                ),
+              },
               {
                 path: '/meals',
                 element: (
@@ -94,7 +122,12 @@ export const router = createBrowserRouter([
                   </SectionErrorBoundary>
                 ),
               },
-              { path: '/profile/:userId', element: <ProfilePage /> },
+              { path: '/profile/:userId', element: (
+                  <SectionErrorBoundary resetKey="/profile/:userId">
+                    <ProfilePage />
+                  </SectionErrorBoundary>
+                ),
+              },
               { path: '/settings', element: <SettingsPage /> },
             ],
           },

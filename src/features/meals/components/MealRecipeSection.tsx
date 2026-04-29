@@ -28,7 +28,6 @@ export interface MealRecipeSectionProps {
   familyMembers: UserProfile[]
   onRemoveRecipe: () => void
   onAssignTask: (taskIndex: number, assigneeId: string | null, assigneeName: string | null) => void
-  onCompleteTask: (taskIndex: number, completed: boolean) => void
 }
 
 export function MealRecipeSection({
@@ -39,10 +38,8 @@ export function MealRecipeSection({
   familyMembers,
   onRemoveRecipe,
   onAssignTask,
-  onCompleteTask,
 }: MealRecipeSectionProps) {
   const [open, setOpen] = useState(true)
-  const completedCount = recipe.tasks.filter((t) => t.completedAt !== null).length
   const totalCount = recipe.tasks.length
 
   return (
@@ -64,7 +61,7 @@ export function MealRecipeSection({
 
           {totalCount > 0 && (
             <span className="text-xs text-muted-foreground">
-              {completedCount}/{totalCount} tasks
+              {totalCount} {totalCount === 1 ? 'task' : 'tasks'}
             </span>
           )}
 
@@ -83,7 +80,7 @@ export function MealRecipeSection({
 
         {/* Tasks */}
         <CollapsibleContent>
-          <div className="border-t px-3 py-2 space-y-1">
+          <div className="border-t p-3 space-y-2">
             {recipe.tasks.length === 0 ? (
               <p className="text-sm text-muted-foreground py-2 text-center">
                 No tasks for this recipe.
@@ -101,7 +98,6 @@ export function MealRecipeSection({
                     const member = familyMembers.find((m) => m.userId === assigneeId)
                     onAssignTask(ti, assigneeId, member?.displayName ?? null)
                   }}
-                  onComplete={(completed) => onCompleteTask(ti, completed)}
                 />
               ))
             )}

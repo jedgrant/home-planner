@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { StickyNote, Trash2 } from 'lucide-react'
 import { Checkbox } from '@/shared/components/ui/checkbox'
-import { Button } from '@/shared/components/ui/button'
-import { Input } from '@/shared/components/ui/input'
 import { cn } from '@/shared/lib/utils'
 import type { GroceryItem } from '@/shared/types/grocery'
+
+const QUANTITIES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
 
 interface GroceryItemRowProps {
   item: GroceryItem
@@ -23,92 +23,141 @@ export function GroceryItemRow({
   onEdit,
   onRemove,
 }: GroceryItemRowProps) {
-  const [editing, setEditing] = useState(false)
+  const [editingName, setEditingName] = useState(false)
   const [editName, setEditName] = useState(item.name)
-  const [editQty, setEditQty] = useState(item.quantity)
+  const [showNote, setShowNote] = useState(Boolean(item.note))
   const [editNote, setEditNote] = useState(item.note)
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
-  function handleCheckChange(checked: boolean) {
-    if (checked) {
-      onComplete()
-    } else {
-      onUncomplete()
-    }
+  useEffect(() => { setEditName(item.name) }, [item.name])
+  useEffect(() => { setEditNote(item.note) }, [item.note])
+
+  function startEditingName() {
+    if (!isParent) return
+    setEditingName(true)
+    setTimeout(() => nameInputRef.current?.select(), 0)
   }
 
-  async function handleSaveEdit() {
-    await onEdit(editName.trim(), editQty.trim(), editNote.trim())
-    setEditing(false)
+  async function saveName() {
+    const trimmed = editName.trim()
+    if (!trimmed) { setEditName(item.name); setEditingName(false); return }
+    setEditingName(false)
+    if (trimmed !== item.name) await onEdit(trimmed, item.quantity, item.note)
   }
 
-  if (editing) {
-    return (
-      <div className="flex flex-col gap-2 py-3 border-b last:border-0">
-        <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Item name" />
-        <div className="grid grid-cols-2 gap-2">
-          <Input value={editQty} onChange={(e) => setEditQty(e.target.value)} placeholder="Quantity" />
-          <Input value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder="Note" />
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" onClick={handleSaveEdit} disabled={!editName.trim()}>Save</Button>
-          <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
-        </div>
-      </div>
-    )
+  async function saveNote(value: string) {
+    if (value !== item.note) await onEdit(item.name, item.quantity, value)
+  }
+
+  async function changeQuantity(qty: string) {
+    if (qty !== item.quantity) await onEdit(item.name, qty, item.note)
   }
 
   return (
-    <div
-      className={cn(
-        'flex items-center gap-3 py-3 border-b last:border-0',
-        item.completed && 'opacity-60'
-      )}
-    >
-      <Checkbox
-        id={`item-${item.itemId}`}
-        checked={item.completed}
-        onCheckedChange={(checked) => handleCheckChange(Boolean(checked))}
-        aria-label={`Mark ${item.name} as ${item.completed ? 'pending' : 'complete'}`}
-      />
-      <div className="flex-1 min-w-0">
-        <p
-          className={cn(
-            'text-sm font-medium text-foreground truncate',
-            item.completed && 'line-through'
-          )}
-        >
-          {item.name}
-          {item.quantity && (
-            <span className="ml-1.5 text-muted-foreground font-normal">
-              · {item.quantity}
+    <div className="group flex flex-col gap-0.5 py-2.5 border-b border-border/40 last:border-0">
+      <div className="flex items-center gap-2">
+        {/* Complete checkbox */}
+        <Checkbox
+          checked={item.completed}
+          onCheckedChange={(checked) => {
+            if (checked) onComplete()
+            else onUncomplete()
+          }}
+          aria-label={`Mark ${item.name} as ${item.completed ? 'pending' : 'complete'}`}
+          className="shrink-0"
+        />
+
+        {/* Name — click to edit (parents only) */}
+        <div className="flex-1 min-w-0">
+          {editingName ? (
+            <input
+              ref={nameInputRef}
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveName()
+                if (e.key === 'Escape') { setEditName(item.name); setEditingName(false) }
+              }}
+              className="w-full text-sm bg-transparent border-b border-primary outline-none py-0.5 text-foreground"
+            />
+          ) : (
+            <span
+              onClick={startEditingName}
+              title={isParent ? 'Click to edit' : undefined}
+              className={cn(
+                'text-sm text-foreground truncate block select-none',
+                isParent && 'cursor-text',
+                item.completed && 'opacity-50',
+              )}
+            >
+              {item.name}
             </span>
           )}
-        </p>
-        {item.note && (
-          <p className="text-xs text-muted-foreground truncate">{item.note}</p>
-        )}
-      </div>
-      {isParent && (
-        <div className="flex gap-1 shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            aria-label={`Edit ${item.name}`}
-            onClick={() => setEditing(true)}
+        </div>
+
+        {/* Quantity select (parents) or read-only label (children) */}
+        {isParent ? (
+          <select
+            value={item.quantity && QUANTITIES.includes(item.quantity) ? item.quantity : '1'}
+            onChange={(e) => changeQuantity(e.target.value)}
+            className="text-xs text-muted-foreground bg-transparent border border-border/60 rounded px-1 py-0.5 cursor-pointer hover:border-primary/50 focus:outline-none shrink-0 w-11"
+            aria-label="Quantity"
           >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-            aria-label={`Remove ${item.name}`}
+            {QUANTITIES.map((q) => (
+              <option key={q} value={q}>{q}</option>
+            ))}
+          </select>
+        ) : (
+          item.quantity && item.quantity !== '1' && (
+            <span className="text-xs text-muted-foreground shrink-0">×{item.quantity}</span>
+          )
+        )}
+
+        {/* Note toggle (parents only) */}
+        {isParent && (
+          <button
+            onClick={() => setShowNote((s) => !s)}
+            className={cn(
+              'shrink-0 transition-all',
+              item.note || showNote
+                ? 'text-primary'
+                : 'text-muted-foreground/30 opacity-0 group-hover:opacity-100',
+            )}
+            aria-label="Toggle note"
+          >
+            <StickyNote className="h-3.5 w-3.5" />
+          </button>
+        )}
+
+        {/* Remove (parents only, hover-reveal) */}
+        {isParent && (
+          <button
             onClick={onRemove}
+            className="shrink-0 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"
+            aria-label={`Remove ${item.name}`}
           >
             <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          </button>
+        )}
+      </div>
+
+      {/* Editable note */}
+      {isParent && showNote && (
+        <div className="pl-6">
+          <input
+            value={editNote}
+            onChange={(e) => setEditNote(e.target.value)}
+            onBlur={(e) => saveNote(e.target.value.trim())}
+            placeholder="Add a note…"
+            className="w-full text-xs text-muted-foreground bg-transparent border-b border-border/40 outline-none py-0.5 placeholder:text-muted-foreground/40"
+          />
         </div>
+      )}
+
+      {/* Read-only note for children */}
+      {!isParent && item.note && (
+        <p className="pl-6 text-xs text-muted-foreground">{item.note}</p>
       )}
     </div>
   )

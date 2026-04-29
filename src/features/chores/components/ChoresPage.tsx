@@ -30,8 +30,13 @@ export function ChoresPage() {
 
   const { data: members } = useFamilyMembers(familyId)
   const { data: groups } = useChoreGroups(familyId)
-  const memberNames: Record<string, string> = Object.fromEntries(
-    (members ?? []).map((m) => [m.userId, m.displayName]),
+  const memberNames = useMemo(
+    () => Object.fromEntries((members ?? []).map((m) => [m.userId, m.displayName])),
+    [members],
+  )
+  const memberPhotos = useMemo(
+    () => Object.fromEntries((members ?? []).map((m) => [m.userId, m.photoUrl ?? null])),
+    [members],
   )
 
   const { data: weekDoc, isLoading } = useWeeklyChoreDoc(familyId, currentWeekId, memberNames)
@@ -48,11 +53,11 @@ export function ChoresPage() {
   }, [groups])
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-foreground">Chores</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground">Chores</h1>
           <p className="text-sm text-muted-foreground">
             {format(weekStart, 'MMM d')} – {format(weekEnd, 'MMM d, yyyy')} · {currentWeekId}
           </p>
@@ -108,7 +113,9 @@ export function ChoresPage() {
       {/* Group sections */}
       {!isLoading && weekDoc && (
         <div className="space-y-4">
-          {Object.entries(weekDoc.assignments).map(([groupId, assignment]) => (
+          {Object.entries(weekDoc.assignments)
+            .sort(([, a], [, b]) => a.groupName.localeCompare(b.groupName))
+            .map(([groupId, assignment]) => (
             <ChoreGroupSection
               key={groupId}
               groupId={groupId}
@@ -118,6 +125,8 @@ export function ChoresPage() {
               isParent={isParent}
               currentUserId={user?.uid ?? ''}
               choreNameMap={choreNameMap}
+              memberNames={memberNames}
+              memberPhotos={memberPhotos}
             />
           ))}
           {Object.keys(weekDoc.assignments).length === 0 && (

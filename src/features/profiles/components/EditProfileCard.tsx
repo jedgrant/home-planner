@@ -8,7 +8,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/shared/components/ui/form'
 import { Input } from '@/shared/components/ui/input'
@@ -54,7 +53,6 @@ export function EditProfileCard({ profile, isParent }: EditProfileCardProps) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-semibold text-foreground">Edit profile</h2>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -62,7 +60,6 @@ export function EditProfileCard({ profile, isParent }: EditProfileCardProps) {
             name="displayName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Display name</FormLabel>
                 <FormControl>
                   <Input {...field} />
                 </FormControl>

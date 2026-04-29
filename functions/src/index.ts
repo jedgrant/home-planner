@@ -6,6 +6,7 @@ initializeApp()
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type TaskDifficulty = 'easy' | 'medium' | 'hard'
+type CourseType = 'entree' | 'side' | 'salad' | 'fruit' | 'dessert'
 
 interface SuggestRecipeInput {
   recipeName: string
@@ -31,9 +32,9 @@ interface SuggestTasksOutput {
 // ─── suggestRecipe ────────────────────────────────────────────────────────────
 // TODO: Replace stub with a real Gemini call once a project API key is configured.
 
-export const suggestRecipe = onCall<SuggestRecipeInput, SuggestRecipeOutput>(
+export const suggestRecipe = onCall<SuggestRecipeInput>(
   { region: 'us-central1' },
-  async (request) => {
+  async (request): Promise<SuggestRecipeOutput> => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Must be signed in.')
     }
@@ -61,7 +62,7 @@ export const suggestRecipe = onCall<SuggestRecipeInput, SuggestRecipeOutput>(
 
 // ─── suggestTasks ─────────────────────────────────────────────────────────────
 
-export const suggestTasks = onCall<SuggestTasksInput, SuggestTasksOutput>(
+export const suggestTasks = onCall<SuggestTasksInput>(
   { region: 'us-central1' },
   async (request) => {
     if (!request.auth) {
@@ -91,6 +92,62 @@ export const suggestTasks = onCall<SuggestTasksInput, SuggestTasksOutput>(
   }
 )
 
+// ─── parseRecipeFromContent ───────────────────────────────────────────────────
+// Parses a recipe from pasted text or a base64-encoded image.
+// TODO: Replace stub with a real Gemini/Vision call once an API key is configured.
+// NOTE: imageBase64 is sent inline for simplicity; large images should use Storage
+//       upload + signed URL in production.
+
+interface ParseRecipeInput {
+  text?: string
+  imageBase64?: string
+  imageMediaType?: string
+}
+
+interface ParseRecipeOutput {
+  name: string
+  courseType: CourseType
+  description: string
+  servingSize: number
+  ingredients: { name: string; quantity: string }[]
+  prepTasks: { description: string; difficulty: TaskDifficulty; order: number }[]
+}
+
+export const parseRecipeFromContent = onCall<ParseRecipeInput>(
+  { region: 'us-central1' },
+  async (request): Promise<ParseRecipeOutput> => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be signed in.')
+    }
+    const { text, imageBase64 } = request.data
+    if (!text?.trim() && !imageBase64) {
+      throw new HttpsError(
+        'invalid-argument',
+        'Either text or imageBase64 is required.'
+      )
+    }
+
+    // Stub response — replace with Gemini/Vertex AI call.
+    // Real implementation would send text or the image to the model and
+    // extract structured recipe data from its response.
+    return {
+      name: 'Parsed Recipe',
+      courseType: 'entree' as CourseType,
+      description: 'A delicious recipe parsed from your content.',
+      servingSize: 4,
+      ingredients: [
+        { name: 'Main ingredient', quantity: '2 cups' },
+        { name: 'Secondary ingredient', quantity: '1 tbsp' },
+      ],
+      prepTasks: [
+        { description: 'Prepare all ingredients', difficulty: 'easy' as TaskDifficulty, order: 0 },
+        { description: 'Cook according to instructions', difficulty: 'medium' as TaskDifficulty, order: 1 },
+        { description: 'Serve and enjoy', difficulty: 'easy' as TaskDifficulty, order: 2 },
+      ],
+    }
+  }
+)
+
 // ─── suggestMeal ──────────────────────────────────────────────────────────────
 // TODO: Replace stub with a real Gemini call once a project API key is configured.
 
@@ -98,8 +155,6 @@ interface SuggestMealInput {
   familyId: string
   date: string
 }
-
-type CourseType = 'entree' | 'side' | 'salad' | 'fruit' | 'dessert'
 
 interface SuggestMealOutput {
   name: string
@@ -111,9 +166,9 @@ interface SuggestMealOutput {
   }>
 }
 
-export const suggestMeal = onCall<SuggestMealInput, SuggestMealOutput>(
+export const suggestMeal = onCall<SuggestMealInput>(
   { region: 'us-central1' },
-  async (request) => {
+  async (request): Promise<SuggestMealOutput> => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Must be signed in.')
     }
@@ -166,9 +221,9 @@ interface AssignTasksOutput {
   assignments: TaskAssignment[]
 }
 
-export const assignTasks = onCall<AssignTasksInput, AssignTasksOutput>(
+export const assignTasks = onCall<AssignTasksInput>(
   { region: 'us-central1' },
-  async (request) => {
+  async (request): Promise<AssignTasksOutput> => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Must be signed in.')
     }

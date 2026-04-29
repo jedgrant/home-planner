@@ -67,5 +67,18 @@ export function useStoreMutations(familyId: string) {
     },
   })
 
-  return { addStore, editStore, archiveStore }
+  const setNeedsPurchased = useMutation({
+    mutationFn: async ({ storeId, value }: { storeId: string; value: boolean }) => {
+      const ref = doc(db, storesPath(familyId), storeId)
+      await updateDoc(ref, {
+        needsPurchased: value,
+        updatedAt: serverTimestamp(),
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stores', familyId] })
+    },
+  })
+
+  return { addStore, editStore, archiveStore, setNeedsPurchased }
 }

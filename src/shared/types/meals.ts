@@ -1,7 +1,18 @@
 import type { Timestamp } from 'firebase/firestore'
 import type { CourseType, TaskDifficulty } from './recipes'
 
-export type MealStatus = 'planned' | 'in_progress' | 'served'
+export type MealStatus = 'incomplete' | 'planned' | 'in_progress' | 'served'
+
+export type FreeFormCourseType = 'entree' | 'side' | 'topping' | 'dessert'
+
+export interface FreeFormItem {
+  itemId: string
+  courseType: FreeFormCourseType
+  /** HTML string from Tiptap */
+  description: string
+  assigneeId: string | null
+  assigneeName: string | null
+}
 
 export interface MealTask {
   taskId: string
@@ -10,7 +21,25 @@ export interface MealTask {
   assigneeId: string | null
   assigneeName: string | null
   completedAt: Timestamp | null
-  completedBy: string | null
+}
+
+export interface SuggestionVote {
+  userId: string
+  userName: string
+  photoUrl: string | null
+}
+
+export interface MealSuggestion {
+  suggestionId: string
+  /** null for free-form suggestions */
+  recipeId: string | null
+  name: string
+  /** null for free-form suggestions */
+  courseType: string | null
+  suggestedById: string
+  suggestedByName: string
+  votes: SuggestionVote[]
+  accepted: boolean
 }
 
 export interface MealRecipe {
@@ -29,6 +58,12 @@ export interface Meal {
   status: MealStatus
   servedAt: Timestamp | null
   recipes: MealRecipe[]
+  /** Fixed cleanup tasks (Dishes, Put away food, Wipe down counters). Stored when first assigned. */
+  cleanupTasks?: MealTask[]
+  /** Free-form items (not from recipe book) added to the meal. */
+  freeFormItems?: FreeFormItem[]
+  /** Crowd-sourced entrée suggestions from family members. */
+  suggestions?: MealSuggestion[]
   createdBy: string
   createdAt: Timestamp
   updatedAt: Timestamp

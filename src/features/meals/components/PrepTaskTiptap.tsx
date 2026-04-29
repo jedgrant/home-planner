@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
-import { Bold, Italic, Underline as UnderlineIcon, List } from 'lucide-react'
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered } from 'lucide-react'
 import { Toggle } from '@/shared/components/ui/toggle'
 
 interface PrepTaskTiptapProps {
@@ -81,6 +81,14 @@ export function PrepTaskTiptap({ content, editable, onDebouncedChange }: PrepTas
           >
             <List className="h-3.5 w-3.5" />
           </Toggle>
+          <Toggle
+            size="sm"
+            pressed={editor.isActive('orderedList')}
+            onPressedChange={() => editor.chain().focus().toggleOrderedList().run()}
+            aria-label="Ordered list"
+          >
+            <ListOrdered className="h-3.5 w-3.5" />
+          </Toggle>
         </div>
       )}
       <EditorContent
@@ -90,7 +98,11 @@ export function PrepTaskTiptap({ content, editable, onDebouncedChange }: PrepTas
           [&_.ProseMirror]:min-h-[1.5rem]
           [&_.ProseMirror_ul]:list-disc
           [&_.ProseMirror_ul]:pl-4
-          [&_.ProseMirror_p]:m-0
+          [&_.ProseMirror_ol]:list-decimal
+          [&_.ProseMirror_ol]:pl-4
+          [&_.ProseMirror_p]:mt-0
+          [&_.ProseMirror_p]:mb-2
+          [&_.ProseMirror_p:last-child]:mb-0
           ${editable ? '[&_.ProseMirror]:border [&_.ProseMirror]:border-input [&_.ProseMirror]:rounded-md [&_.ProseMirror]:px-3 [&_.ProseMirror]:py-1.5 [&_.ProseMirror]:text-sm' : ''}
         `}
       />

@@ -19,7 +19,8 @@ import {
   aggregateMealHistory,
   aggregateTaskHistory,
 } from '@/shared/lib/collections'
-import type { Meal, MealRecipe, MealHistoryAggregate, TaskHistoryAggregate } from '@/shared/types/meals'
+import type { Meal, MealRecipe, MealSuggestion, SuggestionVote, MealHistoryAggregate, MealHistorySummary, TaskHistoryAggregate } from '@/shared/types/meals'
+import type { Recipe } from '@/shared/types/recipes'
 
 // ── Reads ─────────────────────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ export function useUpdateMeal(familyId: string) {
       updates,
     }: {
       mealId: string
-      updates: Partial<Pick<Meal, 'name' | 'date' | 'status' | 'recipes'>>
+      updates: Partial<Pick<Meal, 'name' | 'date' | 'status' | 'recipes' | 'cleanupTasks' | 'freeFormItems' | 'suggestions'>>
     }) => {
       await updateDoc(doc(db, mealsPath(familyId), mealId), {
         ...updates,
@@ -264,6 +265,203 @@ export function useAssignMealTask(familyId: string) {
     onSuccess: (_data, { meal }) => {
       qc.invalidateQueries({ queryKey: ['meal', familyId, meal.mealId] })
       qc.invalidateQueries({ queryKey: ['meals', familyId] })
+    },
+  })
+}
+
+export function useAssignCleanupTask(familyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      meal,
+      taskIndex,
+      assigneeId,
+      assigneeName,
+    }: {
+      meal: Meal
+      taskIndex: number
+      assigneeId: string | null
+      assigneeName: string | null
+    }) => {
+      const updatedCleanupTasks = (meal.cleanupTasks ?? []).map((task, ti) => {
+        if (ti !== taskIndex) return task
+        return { ...task, assigneeId, assigneeName }
+      })
+      await updateDoc(doc(db, mealsPath(familyId), meal.mealId), {
+        cleanupTasks: updatedCleanupTasks,
+        updatedAt: serverTimestamp(),
+      })
+    },
+    onSuccess: (_data, { meal }) => {
+      qc.invalidateQueries({ queryKey: ['meal', familyId, meal.mealId] })
+      qc.invalidateQueries({ queryKey: ['meals', familyId] })
+    },
+  })
+}
+
+// ── Meal history ──────────────────────────────────────────────────────────────
+
+export function useMealHistory(familyId: string) {
+  return useQuery({
+    queryKey: ['mealHistory', familyId],
+    queryFn: async () => {
+      const snap = await getDoc(doc(db, aggregateMealHistory(familyId)))
+      if (!snap.exists()) return [] as MealHistorySummary[]
+      return (snap.data() as MealHistoryAggregate).recentMeals
+    },
+    enabled: Boolean(familyId),
+  })
+}
+
+// ── Meal suggestions ──────────────────────────────────────────────────────────
+
+type AddSuggestionPayload = {
+  meal: Meal
+  suggestion: Omit<MealSuggestion, 'suggestionId' | 'votes' | 'accepted'>
+  suggestedByPhotoUrl?: string | null
+}
+
+export function useAddMealSuggestion(familyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ meal, suggestion, suggestedByPhotoUrl = null }: AddSuggestionPayload) => {
+      const newSuggestion: MealSuggestion = {
+        suggestionId: nanoid(),
+        votes: [
+          {
+            userId: suggestion.suggestedById,
+            userName: suggestion.suggestedByName,
+            photoUrl: suggestedByPhotoUrl,
+          },
+        ],
+        accepted: false,
+        ...suggestion,
+      }
+      await updateDoc(doc(db, mealsPath(familyId), meal.mealId), {
+        suggestions: [...(meal.suggestions ?? []), newSuggestion],
+        updatedAt: serverTimestamp(),
+      })
+    },
+    onSuccess: (_data, { meal }) => {
+      qc.invalidateQueries({ queryKey: ['meals', familyId] })
+      qc.invalidateQueries({ queryKey: ['meal', familyId, meal.mealId] })
+    },
+  })
+}
+
+export function useVoteMealSuggestion(familyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      meal,
+      suggestionId,
+      voter,
+    }: {
+      meal: Meal
+      suggestionId: string
+      voter: SuggestionVote
+    }) => {
+      const suggestions = (meal.suggestions ?? []).map((s) => {
+        if (s.suggestionId !== suggestionId) return s
+        const alreadyVoted = s.votes.some((v) => v.userId === voter.userId)
+        return {
+          ...s,
+          votes: alreadyVoted
+            ? s.votes.filter((v) => v.userId !== voter.userId)
+            : [...s.votes, voter],
+        }
+      })
+      await updateDoc(doc(db, mealsPath(familyId), meal.mealId), {
+        suggestions,
+        updatedAt: serverTimestamp(),
+      })
+    },
+    onSuccess: (_data, { meal }) => {
+      qc.invalidateQueries({ queryKey: ['meals', familyId] })
+      qc.invalidateQueries({ queryKey: ['meal', familyId, meal.mealId] })
+    },
+  })
+}
+
+export function useRemoveMealSuggestion(familyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ meal, suggestionId }: { meal: Meal; suggestionId: string }) => {
+      const suggestions = (meal.suggestions ?? []).filter(
+        (s) => s.suggestionId !== suggestionId,
+      )
+      await updateDoc(doc(db, mealsPath(familyId), meal.mealId), {
+        suggestions,
+        updatedAt: serverTimestamp(),
+      })
+    },
+    onSuccess: (_data, { meal }) => {
+      qc.invalidateQueries({ queryKey: ['meals', familyId] })
+      qc.invalidateQueries({ queryKey: ['meal', familyId, meal.mealId] })
+    },
+  })
+}
+
+export function useAcceptMealSuggestion(familyId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      meal,
+      suggestion,
+      allRecipes,
+    }: {
+      meal: Meal
+      suggestion: MealSuggestion
+      allRecipes: Recipe[]
+    }) => {
+      let updatedRecipes = meal.recipes
+      let updatedFreeFormItems = meal.freeFormItems ?? []
+
+      if (suggestion.recipeId) {
+        const recipe = allRecipes.find((r) => r.recipeId === suggestion.recipeId)
+        if (recipe) {
+          const newRecipe: MealRecipe = {
+            recipeId: recipe.recipeId,
+            recipeName: recipe.name,
+            courseType: recipe.courseType,
+            tasks: recipe.prepTasks.map((pt) => ({
+              taskId: pt.taskId,
+              description: pt.description,
+              difficulty: pt.difficulty,
+              assigneeId: null,
+              assigneeName: null,
+              completedAt: null,
+            })),
+          }
+          updatedRecipes = [...meal.recipes, newRecipe]
+        }
+      } else {
+        updatedFreeFormItems = [
+          ...updatedFreeFormItems,
+          {
+            itemId: nanoid(),
+            courseType: 'entree' as const,
+            description: suggestion.name,
+            assigneeId: null,
+            assigneeName: null,
+          },
+        ]
+      }
+
+      const updatedSuggestions = (meal.suggestions ?? []).map((s) =>
+        s.suggestionId === suggestion.suggestionId ? { ...s, accepted: true } : s,
+      )
+
+      await updateDoc(doc(db, mealsPath(familyId), meal.mealId), {
+        recipes: updatedRecipes,
+        freeFormItems: updatedFreeFormItems,
+        suggestions: updatedSuggestions,
+        updatedAt: serverTimestamp(),
+      })
+    },
+    onSuccess: (_data, { meal }) => {
+      qc.invalidateQueries({ queryKey: ['meals', familyId] })
+      qc.invalidateQueries({ queryKey: ['meal', familyId, meal.mealId] })
     },
   })
 }

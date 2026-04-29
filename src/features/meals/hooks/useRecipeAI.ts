@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { httpsCallable } from 'firebase/functions'
 import { functions } from '@/shared/lib/firebase'
-import type { TaskDifficulty } from '@/shared/types/recipes'
+import type { CourseType, TaskDifficulty } from '@/shared/types/recipes'
 
 interface SuggestRecipeInput {
   recipeName: string
@@ -24,6 +24,21 @@ interface SuggestTasksOutput {
   prepTasks: { description: string; difficulty: TaskDifficulty; order: number }[]
 }
 
+interface ParseRecipeInput {
+  text?: string
+  imageBase64?: string
+  imageMediaType?: string
+}
+
+interface ParseRecipeOutput {
+  name: string
+  courseType: CourseType
+  description: string
+  servingSize: number
+  ingredients: { name: string; quantity: string }[]
+  prepTasks: { description: string; difficulty: TaskDifficulty; order: number }[]
+}
+
 export function useAISuggestRecipe() {
   const fn = httpsCallable<SuggestRecipeInput, SuggestRecipeOutput>(
     functions,
@@ -41,5 +56,15 @@ export function useAISuggestTasks() {
   )
   return useMutation({
     mutationFn: (input: SuggestTasksInput) => fn(input).then((r) => r.data),
+  })
+}
+
+export function useParseRecipeFromContent() {
+  const fn = httpsCallable<ParseRecipeInput, ParseRecipeOutput>(
+    functions,
+    'parseRecipeFromContent'
+  )
+  return useMutation({
+    mutationFn: (input: ParseRecipeInput) => fn(input).then((r) => r.data),
   })
 }

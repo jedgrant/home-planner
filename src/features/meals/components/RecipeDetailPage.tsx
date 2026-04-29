@@ -23,7 +23,7 @@ import {
   useArchiveRecipe,
   useSetRecipeVisibility,
 } from '../hooks/useRecipes'
-import { useAISuggestTasks } from '../hooks/useRecipeAI'
+import { useAISuggestRecipe, useAISuggestTasks } from '../hooks/useRecipeAI'
 import { useStores } from '@/features/grocery/hooks/useStores'
 import { useAuthStore } from '@/shared/lib/authStore'
 import { nanoid } from 'nanoid'
@@ -57,6 +57,7 @@ export function RecipeDetailPage() {
   const archiveMutation = useArchiveRecipe(familyId)
   const visibilityMutation = useSetRecipeVisibility(familyId)
   const aiSuggestTasks = useAISuggestTasks()
+  const aiSuggestRecipe = useAISuggestRecipe()
 
   const { data: stores = [] } = useStores(familyId)
 
@@ -104,6 +105,35 @@ export function RecipeDetailPage() {
   function handleTasksSave(next: PrepTask[]) {
     setTasks(next)
     void saveToFirestore(ingredients, next)
+  }
+
+  async function handleAISuggestRecipe() {
+    if (!recipe) return
+    const result = await aiSuggestRecipe.mutateAsync({ recipeName: recipe.name })
+    const newIngredients = result.ingredients.map((ing) => ({
+      ingredientId: nanoid(),
+      name: ing.name,
+      quantity: ing.quantity,
+      unit: null,
+      storeId: null,
+      storeName: null,
+    }))
+    const newTasks: PrepTask[] = result.prepTasks.map((t, i) => ({
+      taskId: nanoid(),
+      description: t.description,
+      difficulty: t.difficulty,
+      order: t.order ?? i,
+    }))
+    setIngredients(newIngredients)
+    setTasks(newTasks)
+    void saveToFirestore(newIngredients, newTasks)
+    await updateMutation.mutateAsync({
+      recipeId: recipe.recipeId,
+      changes: {
+        description: result.description,
+        servingSize: result.servingSize,
+      },
+    })
   }
 
   async function handleAISuggestTasks() {
@@ -241,6 +271,25 @@ export function RecipeDetailPage() {
         <p className="mt-4 text-sm text-muted-foreground whitespace-pre-wrap">
           {recipe.description}
         </p>
+      )}
+
+      {/* AI Suggest Recipe — shown for empty named recipes */}
+      {isParent && !isGlobalView && !recipe.description && ingredients.length === 0 && (
+        <div className="mt-4 rounded-xl border border-dashed p-5 flex flex-col items-center gap-3 text-center">
+          <p className="text-sm text-muted-foreground">
+            This recipe is empty. Let AI fill in a description, ingredients, and prep tasks based on the name.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={aiSuggestRecipe.isPending}
+            onClick={handleAISuggestRecipe}
+          >
+            <Sparkles className="h-4 w-4 mr-1" />
+            {aiSuggestRecipe.isPending ? 'Asking AI…' : 'AI Suggest Recipe'}
+          </Button>
+        </div>
       )}
 
       {/* Ingredients */}

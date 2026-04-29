@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
-import { CheckCircle, Clock, RefreshCw, Upload, XCircle } from 'lucide-react'
-import { Badge } from '@/shared/components/ui/badge'
+import { AlertCircle, Camera, Check, CheckCircle, Clock, RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
-import type { WeeklyChoreEntry, WeeklyChoreStatus } from '@/shared/types/chores'
+import { cn } from '@/shared/lib/utils'
+import type { WeeklyChoreEntry } from '@/shared/types/chores'
+import { format } from 'date-fns'
+import type { Timestamp } from 'firebase/firestore'
 
 interface ChoreRowProps {
   choreId: string
@@ -11,41 +13,45 @@ interface ChoreRowProps {
   entry: WeeklyChoreEntry
   isParent: boolean
   currentUserId: string
+  memberNames: Record<string, string>
   onSubmit: (choreId: string, file?: File) => Promise<void>
   onVerify: (choreId: string) => Promise<void>
+  onUnapprove: (choreId: string) => Promise<void>
   onRequestResubmit: (choreId: string) => Promise<void>
 }
 
-const STATUS_LABELS: Record<WeeklyChoreStatus, string> = {
-  pending: 'Pending',
-  submitted: 'Submitted',
-  complete: 'Done',
-  needs_resubmission: 'Redo',
-}
-
-function StatusBadge({ status }: { status: WeeklyChoreStatus }) {
-  const variants: Record<WeeklyChoreStatus, 'default' | 'secondary' | 'outline' | 'destructive'> =
-    {
-      pending: 'outline',
-      submitted: 'secondary',
-      complete: 'default',
-      needs_resubmission: 'destructive',
-    }
-  return <Badge variant={variants[status]}>{STATUS_LABELS[status]}</Badge>
+function formatTimestamp(ts: Timestamp | null): string {
+  if (!ts) return ''
+  try {
+    return format(ts.toDate(), 'MMM d, h:mm a')
+  } catch {
+    return ''
+  }
 }
 
 export function ChoreRow({
   choreId,
   choreName,
-  choreDescription,
   entry,
   isParent,
-  onSubmit,
+  memberNames,
   onVerify,
+  onUnapprove,
+  onSubmit,
   onRequestResubmit,
 }: ChoreRowProps) {
   const [busy, setBusy] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const isComplete = entry.status === 'complete'
+
+  async function handleVerify() {
+    setBusy(true)
+    try {
+      await onVerify(choreId)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function handleSubmit(file?: File) {
     setBusy(true)
@@ -56,10 +62,10 @@ export function ChoreRow({
     }
   }
 
-  async function handleVerify() {
+  async function handleUnapprove() {
     setBusy(true)
     try {
-      await onVerify(choreId)
+      await onUnapprove(choreId)
     } finally {
       setBusy(false)
     }
@@ -74,52 +80,106 @@ export function ChoreRow({
     }
   }
 
-  return (
-    <div className="flex items-start justify-between gap-4 py-3 border-b last:border-0">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-foreground">{choreName}</span>
-          <StatusBadge status={entry.status} />
+  // ── Parent view: todo-style checkbox ──────────────────────────────────────
+  if (isParent) {
+    return (
+      <div className="flex items-start gap-3 py-2.5 border-b last:border-0">
+        <button
+          role="checkbox"
+          aria-checked={isComplete}
+          aria-label={isComplete ? `Remove approval for ${choreName}` : `Mark ${choreName} complete`}
+          disabled={busy}
+          onClick={isComplete ? handleUnapprove : handleVerify}
+          className={cn(
+            'mt-0.5 h-5 w-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors',
+            isComplete
+              ? 'bg-primary border-primary'
+              : 'border-border hover:border-primary cursor-pointer',
+          )}
+        >
+          {isComplete && <Check className="h-3 w-3 text-primary-foreground" />}
+        </button>
+        <div className="flex-1 min-w-0">
+          <span className="text-sm font-medium">
+            {choreName}
+          </span>
+          {isComplete && (
+            <p className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+              <CheckCircle className="h-3 w-3 shrink-0 text-primary" />
+              Approved by {(entry.verifiedBy && memberNames[entry.verifiedBy]) || entry.verifiedBy}
+              {entry.verifiedAt ? ` · ${formatTimestamp(entry.verifiedAt)}` : ''}
+            </p>
+          )}
+          {entry.status === 'submitted' && (
+            <p className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+              <Clock className="h-3 w-3 shrink-0 text-amber-600" />
+              Approval requested
+            </p>
+          )}
+          {entry.status === 'needs_resubmission' && (
+            <p className="flex items-center gap-1 text-xs text-destructive mt-0.5">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              Needs work
+            </p>
+          )}
         </div>
-        {choreDescription && (
-          <p className="text-xs text-muted-foreground mt-0.5">{choreDescription}</p>
-        )}
-        {entry.status === 'complete' && entry.verifiedAt && (
-          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-            <CheckCircle className="h-3 w-3 text-green-600" />
-            Verified by {entry.verifiedBy}
-          </p>
-        )}
-        {entry.status === 'submitted' && entry.mediaUrl && (
-          <a
-            href={entry.mediaUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs text-primary underline mt-0.5 block"
+        {entry.status === 'submitted' && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 shrink-0 text-muted-foreground"
+            disabled={busy}
+            onClick={handleResubmit}
+            aria-label="Request resubmission"
           >
-            View submission
-          </a>
+            <RefreshCw className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
+    )
+  }
+
+  // ── Child view: camera upload ─────────────────────────────────────────────
+  return (
+    <div className="flex items-center justify-between gap-3 py-2.5 border-b last:border-0">
+      <div className="flex-1 min-w-0">
+        <span
+          className={cn(
+            'text-sm font-medium',
+            isComplete && 'line-through text-muted-foreground',
+          )}
+        >
+          {choreName}
+        </span>
+        {entry.status === 'needs_resubmission' && (
+          <p className="text-xs text-destructive mt-0.5">Please redo this chore</p>
+        )}
+        {entry.status === 'submitted' && (
+          <p className="text-xs text-muted-foreground mt-0.5">Awaiting review</p>
+        )}
+        {isComplete && (
+          <p className="text-xs text-muted-foreground mt-0.5">Done ✓</p>
         )}
       </div>
 
-      <div className="flex items-center gap-1 shrink-0">
-        {/* Pending or needs_resubmission → submit button */}
+      <div className="shrink-0 flex items-center">
         {(entry.status === 'pending' || entry.status === 'needs_resubmission') && (
           <>
             <Button
-              size="sm"
-              variant="outline"
+              size="icon"
+              variant="ghost"
+              className="h-9 w-9 text-muted-foreground hover:text-foreground"
               disabled={busy}
               onClick={() => fileInputRef.current?.click()}
-              aria-label="Upload and submit chore"
+              aria-label="Upload photo or video"
             >
-              <Upload className="h-3.5 w-3.5 mr-1" />
-              Submit
+              <Camera className="h-5 w-5" />
             </Button>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*,video/*"
+              capture="environment"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0]
@@ -129,47 +189,11 @@ export function ChoreRow({
             />
           </>
         )}
-
-        {/* Submitted → parent can verify or request resubmission */}
-        {entry.status === 'submitted' && isParent && (
-          <>
-            <Button
-              size="sm"
-              disabled={busy}
-              onClick={handleVerify}
-              aria-label="Verify chore"
-            >
-              <CheckCircle className="h-3.5 w-3.5 mr-1" />
-              Verify
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              onClick={handleResubmit}
-              aria-label="Request resubmission"
-            >
-              <RefreshCw className="h-3.5 w-3.5 mr-1" />
-              Redo
-            </Button>
-          </>
+        {entry.status === 'submitted' && (
+          <Clock className="h-4 w-4 text-muted-foreground" aria-label="Awaiting review" />
         )}
-
-        {/* Submitted → non-parent sees pending indicator */}
-        {entry.status === 'submitted' && !isParent && (
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" /> Awaiting review
-          </span>
-        )}
-
-        {/* Complete → icon only */}
-        {entry.status === 'complete' && (
-          <CheckCircle className="h-5 w-5 text-green-600" aria-label="Complete" />
-        )}
-
-        {/* Needs resubmission indicator for parent */}
-        {entry.status === 'needs_resubmission' && isParent && (
-          <XCircle className="h-5 w-5 text-destructive" aria-label="Needs resubmission" />
+        {isComplete && (
+          <CheckCircle className="h-5 w-5 text-primary" aria-label="Complete" />
         )}
       </div>
     </div>

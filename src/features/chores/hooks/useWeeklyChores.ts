@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   doc,
   getDoc,
@@ -31,15 +31,29 @@ export function useWeeklyChoreDoc(
 ): UseWeeklyChoreDocReturn {
   const [data, setData] = useState<WeeklyChoreDoc | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  // Prevent infinite re-creation loop when there are genuinely no groups
+  const recreationAttempted = useRef(false)
 
   useEffect(() => {
     if (!familyId || !weekId) return
+    recreationAttempted.current = false
 
     const docRef = doc(db, weeklyChores(familyId), weekId)
 
     const unsub = onSnapshot(docRef, async (snap) => {
       if (snap.exists()) {
-        setData({ ...snap.data(), weekId: snap.id } as WeeklyChoreDoc)
+        const weekData = { ...snap.data(), weekId: snap.id } as WeeklyChoreDoc
+        // If the doc was created with no groups (stale/empty), re-create it once
+        if (
+          Object.keys(weekData.assignments).length === 0 &&
+          !recreationAttempted.current
+        ) {
+          recreationAttempted.current = true
+          await createWeekDoc(familyId, weekId, memberNames)
+          // onSnapshot will fire again with the updated doc
+          return
+        }
+        setData(weekData)
         setIsLoading(false)
       } else {
         // Auto-create the week doc from current group state
@@ -196,6 +210,31 @@ export async function verifyChore({
   }
 
   await updateDoc(docRef, updates)
+}
+
+// ─── Unapprove chore ─────────────────────────────────────────────────────────
+
+interface UnapproveChoreParams {
+  familyId: string
+  weekId: string
+  groupId: string
+  choreId: string
+}
+
+export async function unapproveChore({
+  familyId,
+  weekId,
+  groupId,
+  choreId,
+}: UnapproveChoreParams): Promise<void> {
+  const docRef = doc(db, weeklyChores(familyId), weekId)
+  await updateDoc(docRef, {
+    [`assignments.${groupId}.chores.${choreId}.status`]: 'pending',
+    [`assignments.${groupId}.chores.${choreId}.verifiedAt`]: null,
+    [`assignments.${groupId}.chores.${choreId}.verifiedBy`]: null,
+    [`assignments.${groupId}.completedAt`]: null,
+    updatedAt: serverTimestamp(),
+  })
 }
 
 // ─── Request resubmission ─────────────────────────────────────────────────────

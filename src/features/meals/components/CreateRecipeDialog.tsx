@@ -88,6 +88,7 @@ export function CreateRecipeDialog({
         ingredientId: nanoid(),
         name: ing.name,
         quantity: ing.quantity,
+        unit: null,
         storeId: null,
         storeName: null,
       })) ?? []

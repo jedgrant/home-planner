@@ -13,7 +13,7 @@ import {
 } from '@/shared/components/ui/select'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { RecipeCard } from './RecipeCard'
-import { CreateRecipeDialog } from './CreateRecipeDialog'
+import { CreateRecipeSheet } from './CreateRecipeSheet'
 import {
   useRecipes,
   useGlobalRecipes,
@@ -167,7 +167,7 @@ export function RecipeBookPage() {
       </Tabs>
 
       {isParent && (
-        <CreateRecipeDialog
+        <CreateRecipeSheet
           open={showCreate}
           onClose={() => setShowCreate(false)}
           familyId={familyId}

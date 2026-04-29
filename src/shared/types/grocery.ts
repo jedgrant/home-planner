@@ -6,6 +6,7 @@ export interface Store {
   name: string
   notes: string
   archived: boolean
+  needsPurchased: boolean
   createdAt: Timestamp
   updatedAt: Timestamp
 }

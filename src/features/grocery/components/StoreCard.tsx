@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Plus, MoreHorizontal, Pencil, Trash2, ShoppingBag } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -34,6 +35,7 @@ import {
 import { AddEditStoreDialog } from "./AddEditStoreDialog";
 import { CardGroceryItemRow } from "./CardGroceryItemRow";
 import { useGroceryItemMutations } from "../hooks/useGroceryItemMutations";
+import { useStoreMutations } from "../hooks/useStoreMutations";
 import { useAuthStore } from "@/shared/lib/authStore";
 import { cn } from "@/shared/lib/utils";
 import type { Store, GroceryItem } from "@/shared/types/grocery";
@@ -57,6 +59,7 @@ export function StoreCard({
   const familyId = user?.familyId ?? "";
   const { addItem, editItem, completeItem, removeItem } =
     useGroceryItemMutations(familyId);
+  const { setNeedsPurchased } = useStoreMutations(familyId);
 
   const { setNodeRef, isOver } = useDroppable({ id: store.storeId });
 
@@ -91,8 +94,13 @@ export function StoreCard({
         <CardHeader className="">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <CardTitle className="text-base font-bold truncate">
-                {store.name}
+              <CardTitle className="text-lg font-bold truncate">
+                <Link
+                  to={`/grocery/${store.storeId}`}
+                  className="text-primary hover:underline"
+                >
+                  {store.name}
+                </Link>
               </CardTitle>
               {items.length > 0 && (
                 <Badge
@@ -103,29 +111,51 @@ export function StoreCard({
                 </Badge>
               )}
             </div>
-            {isParent && (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground/50 hover:bg-muted hover:text-foreground transition-colors shrink-0"
-                  aria-label="Store options"
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isParent && (
+                <button
+                  onClick={() =>
+                    setNeedsPurchased.mutate({
+                      storeId: store.storeId,
+                      value: !store.needsPurchased,
+                    })
+                  }
+                  aria-pressed={!!store.needsPurchased}
+                  aria-label="Toggle needs purchased"
+                  className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                    store.needsPurchased
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                  }`}
                 >
-                  <MoreHorizontal className="h-4 w-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => setRemoveOpen(true)}
+                  <ShoppingBag className="h-3 w-3" />
+                  Needs purchased
+                </button>
+              )}
+              {isParent && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground/50 hover:bg-muted hover:text-foreground transition-colors shrink-0"
+                    aria-label="Store options"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remove
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                    <MoreHorizontal className="h-4 w-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => setRemoveOpen(true)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remove
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </div>
           {store.notes && (
             <p className="text-xs text-muted-foreground">{store.notes}</p>
@@ -177,7 +207,7 @@ export function StoreCard({
 
           
         </CardContent>
-        <CardFooter>
+        <CardFooter className="gap-2">
           <Input
             ref={addInputRef}
             value={addName}

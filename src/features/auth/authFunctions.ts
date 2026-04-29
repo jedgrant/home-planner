@@ -11,7 +11,8 @@ import {
   updateDoc,
   serverTimestamp,
 } from 'firebase/firestore'
-import { auth, db } from '@/shared/lib/firebase'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { auth, db, storage } from '@/shared/lib/firebase'
 import { USERS } from '@/shared/lib/collections'
 
 export async function signUp(
@@ -56,4 +57,18 @@ export async function updateDisplayName(
     displayName,
     updatedAt: serverTimestamp(),
   })
+}
+
+export async function updatePhotoUrl(uid: string, file: File): Promise<string> {
+  const fileRef = storageRef(storage, `avatars/${uid}`)
+  await uploadBytes(fileRef, file)
+  const url = await getDownloadURL(fileRef)
+  if (auth.currentUser) {
+    await updateProfile(auth.currentUser, { photoURL: url })
+  }
+  await updateDoc(doc(db, USERS, uid), {
+    photoUrl: url,
+    updatedAt: serverTimestamp(),
+  })
+  return url
 }

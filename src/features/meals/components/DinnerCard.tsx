@@ -5,14 +5,17 @@ import { Card, CardContent } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import type { Meal } from '@/shared/types/meals'
+import { deriveMealStatus } from '../utils'
 
 const STATUS_VARIANT: Record<string, 'secondary' | 'outline' | 'default'> = {
+  incomplete: 'secondary',
   planned: 'outline',
   in_progress: 'secondary',
   served: 'default',
 }
 
 const STATUS_LABEL: Record<string, string> = {
+  incomplete: 'Incomplete',
   planned: 'Planned',
   in_progress: 'In Progress',
   served: 'Served',
@@ -53,7 +56,7 @@ export function DinnerCard({ day, meal, isLoading, isParent, onPlanDinner }: Din
       <div className="flex items-center gap-4">
         {dayLabel}
         <div
-          className={`flex-1 rounded-xl border border-dashed p-4 flex items-center justify-between text-muted-foreground transition-colors ${isParent ? 'cursor-pointer hover:bg-muted hover:border-border hover:text-foreground' : ''}`}
+          className={`flex-1 rounded-xl border border-dashed p-4 flex items-center justify-between text-muted-foreground transition-colors hover:bg-muted/30 bg-card/10 backdrop-blur-sm ${isParent ? 'cursor-pointer hover:bg-muted/60 hover:border-border hover:text-foreground' : ''}`}
           onClick={isParent ? onPlanDinner : undefined}
           role={isParent ? 'button' : undefined}
           tabIndex={isParent ? 0 : undefined}
@@ -73,7 +76,7 @@ export function DinnerCard({ day, meal, isLoading, isParent, onPlanDinner }: Din
     <div className="flex items-center gap-4">
       {dayLabel}
       <Card
-        className="flex-1 cursor-pointer hover:bg-muted transition-colors"
+        className="flex-1 cursor-pointer hover:bg-muted/40 transition-colors bg-card/10 backdrop-blur-sm"
         onClick={() => navigate(`/meals/${meal.mealId}`)}
         role="button"
         aria-label={`View dinner on ${format(day, 'EEEE, MMMM d')}: ${meal.name}`}
@@ -92,10 +95,10 @@ export function DinnerCard({ day, meal, isLoading, isParent, onPlanDinner }: Din
             )}
           </div>
           <Badge
-            variant={STATUS_VARIANT[meal.status] ?? 'outline'}
+            variant={STATUS_VARIANT[deriveMealStatus(meal)] ?? 'outline'}
             className="shrink-0 rounded-full"
           >
-            {STATUS_LABEL[meal.status] ?? meal.status}
+            {STATUS_LABEL[deriveMealStatus(meal)] ?? meal.status}
           </Badge>
         </CardContent>
       </Card>

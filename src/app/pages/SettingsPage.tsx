@@ -9,7 +9,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/shared/components/ui/form'
 import { Input } from '@/shared/components/ui/input'
@@ -64,7 +63,7 @@ export function SettingsPage() {
 
   if (familyLoading) {
     return (
-      <div className="p-6 space-y-4">
+      <div className="p-4 md:p-6 space-y-4">
         <Skeleton className="h-6 w-40" />
         <Skeleton className="h-10 w-full max-w-sm" />
       </div>
@@ -72,8 +71,8 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 p-6">
-      <h1 className="text-xl font-semibold text-foreground">Family settings</h1>
+    <div className="mx-auto max-w-2xl space-y-8 p-4 md:p-6">
+      <h1 className="text-2xl md:text-3xl font-semibold text-foreground">Family settings</h1>
 
       {/* Family name */}
       {isParent && (

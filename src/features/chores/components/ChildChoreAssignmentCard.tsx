@@ -1,29 +1,39 @@
-import { useRef, useState } from 'react'
-import { format, isPast, parseISO } from 'date-fns'
-import { CheckCircle2, Clock, AlertTriangle, UploadCloud, RefreshCw } from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
-import { Button } from '@/shared/components/ui/button'
-import { Badge } from '@/shared/components/ui/badge'
-import { submitChore } from '@/features/chores/hooks/useWeeklyChores'
-import type { OpenAssignment } from '@/features/chores/hooks/useChildChoreAssignments'
-import type { WeeklyChoreStatus } from '@/shared/types/chores'
+import { useRef, useState } from "react";
+import { format, isPast, parseISO } from "date-fns";
+import {
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  UploadCloud,
+  RefreshCw,
+  ClipboardList,
+} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { submitChore } from "@/features/chores/hooks/useWeeklyChores";
+import type { OpenAssignment } from "@/features/chores/hooks/useChildChoreAssignments";
+import type { WeeklyChoreStatus } from "@/shared/types/chores";
 
 interface ChildChoreAssignmentCardProps {
-  familyId: string
-  userId: string
-  openAssignment: OpenAssignment
-  choreNameMap: Record<string, { name: string; description: string }>
+  familyId: string;
+  userId: string;
+  openAssignment: OpenAssignment;
+  choreNameMap: Record<string, { name: string; description: string }>;
 }
 
 const STATUS_CONFIG: Record<
   WeeklyChoreStatus,
-  { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }
+  {
+    label: string;
+    variant: "default" | "secondary" | "outline" | "destructive";
+  }
 > = {
-  pending: { label: 'To do', variant: 'outline' },
-  submitted: { label: 'Awaiting approval', variant: 'secondary' },
-  complete: { label: 'Approved', variant: 'default' },
-  needs_resubmission: { label: 'Redo needed', variant: 'destructive' },
-}
+  pending: { label: "To do", variant: "outline" },
+  submitted: { label: "Awaiting approval", variant: "secondary" },
+  complete: { label: "Approved", variant: "default" },
+  needs_resubmission: { label: "Redo needed", variant: "destructive" },
+};
 
 export function ChildChoreAssignmentCard({
   familyId,
@@ -31,24 +41,34 @@ export function ChildChoreAssignmentCard({
   openAssignment,
   choreNameMap,
 }: ChildChoreAssignmentCardProps) {
-  const qc = useQueryClient()
-  const [busyChoreId, setBusyChoreId] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [pendingSubmitChoreId, setPendingSubmitChoreId] = useState<string | null>(null)
+  const qc = useQueryClient();
+  const [busyChoreId, setBusyChoreId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingSubmitChoreId, setPendingSubmitChoreId] = useState<
+    string | null
+  >(null);
 
-  const { weekId, weekStartDate, expectedDueDate, groupId, assignment } = openAssignment
-  const chores = Object.entries(assignment.chores)
-  const doneCount = chores.filter(([, c]) => c.status === 'complete').length
-  const isOverdue = isPast(parseISO(expectedDueDate + 'T23:59:59'))
+  const { weekId, expectedDueDate, groupId, assignment } =
+    openAssignment;
+  const chores = Object.entries(assignment.chores);
+  const doneCount = chores.filter(([, c]) => c.status === "complete").length;
+  const isOverdue = isPast(parseISO(expectedDueDate + "T23:59:59"));
 
   async function handleSubmit(choreId: string, file?: File) {
-    setBusyChoreId(choreId)
+    setBusyChoreId(choreId);
     try {
-      await submitChore({ familyId, weekId, groupId, choreId, submittedBy: userId, mediaFile: file })
-      qc.invalidateQueries({ queryKey: ['weeklyChores', familyId, weekId] })
+      await submitChore({
+        familyId,
+        weekId,
+        groupId,
+        choreId,
+        submittedBy: userId,
+        mediaFile: file,
+      });
+      qc.invalidateQueries({ queryKey: ["weeklyChores", familyId, weekId] });
     } finally {
-      setBusyChoreId(null)
-      setPendingSubmitChoreId(null)
+      setBusyChoreId(null);
+      setPendingSubmitChoreId(null);
     }
   }
 
@@ -57,37 +77,56 @@ export function ChildChoreAssignmentCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-base font-semibold text-foreground">{assignment.groupName}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Week of {format(parseISO(weekStartDate), 'MMM d')}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <ClipboardList className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-semibold text-foreground">Chores</h2>
+          </div>
           <span
             className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
               isOverdue
-                ? 'bg-destructive/10 text-destructive'
-                : 'bg-muted text-muted-foreground'
+                ? "bg-destructive/10 text-destructive"
+                : "bg-muted text-muted-foreground"
             }`}
           >
             {isOverdue && <AlertTriangle className="h-3 w-3" />}
             {isOverdue
-              ? 'Overdue · due ' + format(parseISO(expectedDueDate), 'MMM d')
-              : 'Due ' + format(parseISO(expectedDueDate), 'EEE, MMM d')}
+              ? "Overdue · due " + format(parseISO(expectedDueDate), "MMM d")
+              : "Due " + format(parseISO(expectedDueDate), "EEE, MMM d")}
           </span>
+        </div>
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <span
+            className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground`}
+          >
+            {assignment.groupName}
+          </span>
+
           <span className="text-xs text-muted-foreground">
             {doneCount}/{chores.length} approved
           </span>
         </div>
+
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full rounded-full bg-primary transition-all duration-300"
+          style={{ width: `${chores.length > 0 ? (doneCount / chores.length) * 100 : 0}%` }}
+        />
       </div>
 
       {/* Chore list */}
       <div className="space-y-0">
         {chores.map(([choreId, entry]) => {
-          const info = choreNameMap[choreId] ?? { name: choreId, description: '' }
-          const config = STATUS_CONFIG[entry.status]
-          const canSubmit = entry.status === 'pending' || entry.status === 'needs_resubmission'
-          const isBusy = busyChoreId === choreId
+          const info = choreNameMap[choreId] ?? {
+            name: choreId,
+            description: "",
+          };
+          const config = STATUS_CONFIG[entry.status];
+          const canSubmit =
+            entry.status === "pending" || entry.status === "needs_resubmission";
+          const isBusy = busyChoreId === choreId;
 
           return (
             <div
@@ -95,23 +134,31 @@ export function ChildChoreAssignmentCard({
               className="flex items-center justify-between gap-3 py-3 border-b last:border-0"
             >
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                {entry.status === 'complete' ? (
+                {entry.status === "complete" ? (
                   <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                ) : entry.status === 'submitted' ? (
+                ) : entry.status === "submitted" ? (
                   <Clock className="h-4 w-4 text-yellow-500 shrink-0" />
                 ) : (
                   <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/40 shrink-0" />
                 )}
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">{info.name}</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {info.name}
+                  </p>
                   {info.description && (
-                    <p className="text-xs text-muted-foreground">{info.description}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {info.description}
+                    </p>
                   )}
-                  {entry.status === 'complete' && entry.verifiedBy && (
-                    <p className="text-xs text-muted-foreground">Verified by {entry.verifiedBy}</p>
+                  {entry.status === "complete" && entry.verifiedBy && (
+                    <p className="text-xs text-muted-foreground">
+                      Verified by {entry.verifiedBy}
+                    </p>
                   )}
-                  {entry.status === 'needs_resubmission' && (
-                    <p className="text-xs text-destructive">Parent asked you to redo this</p>
+                  {entry.status === "needs_resubmission" && (
+                    <p className="text-xs text-destructive">
+                      Parent asked you to redo this
+                    </p>
                   )}
                 </div>
               </div>
@@ -130,7 +177,7 @@ export function ChildChoreAssignmentCard({
                       {isBusy && !pendingSubmitChoreId ? (
                         <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                       ) : (
-                        'Done'
+                        "Done"
                       )}
                     </Button>
                     <Button
@@ -139,8 +186,8 @@ export function ChildChoreAssignmentCard({
                       disabled={isBusy}
                       aria-label="Upload photo proof"
                       onClick={() => {
-                        setPendingSubmitChoreId(choreId)
-                        fileInputRef.current?.click()
+                        setPendingSubmitChoreId(choreId);
+                        fileInputRef.current?.click();
                       }}
                     >
                       {isBusy && pendingSubmitChoreId === choreId ? (
@@ -153,7 +200,7 @@ export function ChildChoreAssignmentCard({
                 )}
               </div>
             </div>
-          )
+          );
         })}
       </div>
 
@@ -165,13 +212,13 @@ export function ChildChoreAssignmentCard({
         className="sr-only"
         aria-hidden="true"
         onChange={(e) => {
-          const file = e.target.files?.[0]
+          const file = e.target.files?.[0];
           if (file && pendingSubmitChoreId) {
-            void handleSubmit(pendingSubmitChoreId, file)
+            void handleSubmit(pendingSubmitChoreId, file);
           }
-          e.target.value = ''
+          e.target.value = "";
         }}
       />
     </div>
-  )
+  );
 }
