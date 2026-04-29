@@ -18,7 +18,9 @@ import {
   ParentTodayMealCard,
 } from "@/features/dashboard";
 import type { Meal } from "@/shared/types/meals";
-
+import { EmptyState } from "@/shared/components/EmptyState";
+import choresIllustration from "@/assets/illustration-chores.png";
+import groceryIllustration from "@/assets/illustration-groceries.png";
 // ─── Dashboard page ───────────────────────────────────────────────────────────
 
 export function DashboardPage() {
@@ -110,7 +112,7 @@ export function DashboardPage() {
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
+      <div className="flex flex-col lg:flex-row gap-8 lg:items-start pb-12 md:pb-0">
         {/* ── Left column ─────────────────────────────────── */}
         <div className="flex-1 min-w-0 space-y-8">
           {/* Meals */}
@@ -138,7 +140,7 @@ export function DashboardPage() {
               <div className="flex items-center gap-2.5">
                 <ShoppingCart className="h-5 w-5 text-primary" />
                 <h2 className="text-xl font-semibold text-foreground">
-                  Shopping needed
+                  Shopping
                 </h2>
               </div>
               <Link
@@ -152,9 +154,14 @@ export function DashboardPage() {
             {stores && stores.length > 0 ? (
               <GroceryStoreList stores={stores} familyId={familyId} />
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No stores set up yet.
-              </p>
+              <EmptyState
+                image={groceryIllustration}
+                imageAlt="Grocery illustration"
+                aspectRatio="4/3"
+                message="No stores set up yet"
+                buttonLabel="Set up grocery"
+                buttonRoute="/grocery"
+              />
             )}
           </section>
         </div>
@@ -164,7 +171,7 @@ export function DashboardPage() {
           <div>
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-foreground mb-0">
-                Chore tracker
+                Chores
               </h2>
               <Link
                 to="/chores"
@@ -181,9 +188,14 @@ export function DashboardPage() {
             </p>
           </div>
           {groups !== undefined && children.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No children in the family yet.
-            </p>
+            <EmptyState
+              image={choresIllustration}
+              imageAlt="Chores illustration"
+              aspectRatio="4/3"
+              message="No children in the family yet"
+              buttonLabel="Manage chores"
+              buttonRoute="/chores"
+            />
           ) : (
             <div className="space-y-3">
               {children.map((child) => (

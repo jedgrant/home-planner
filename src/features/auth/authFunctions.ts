@@ -59,7 +59,7 @@ export async function updateDisplayName(
   })
 }
 
-export async function updatePhotoUrl(uid: string, file: File): Promise<string> {
+export async function updatePhotoUrl(uid: string, file: File | Blob): Promise<string> {
   const fileRef = storageRef(storage, `avatars/${uid}`)
   await uploadBytes(fileRef, file)
   const url = await getDownloadURL(fileRef)

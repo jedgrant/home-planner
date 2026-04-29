@@ -29,9 +29,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex h-16 bg-sidebar border-t border-sidebar-border"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-sidebar border-t border-sidebar-border pb-safe"
       aria-label="Main navigation"
     >
+      <div className="flex h-16">
       {items.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
@@ -49,6 +50,7 @@ export function BottomNav() {
           {label}
         </NavLink>
       ))}
+      </div>
     </nav>
   )
 }

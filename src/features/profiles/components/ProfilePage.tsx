@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { signOut } from "firebase/auth";
+import { auth } from "@/shared/lib/firebase";
 import {
   Avatar,
   AvatarFallback,
@@ -8,11 +10,13 @@ import {
 import { Badge } from "@/shared/components/ui/badge";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Separator } from "@/shared/components/ui/separator";
+import { Button } from "@/shared/components/ui/button";
 import { useAuthStore } from "@/shared/lib/authStore";
 import { useUserProfile } from "@/features/auth/hooks/useFamilyQueries";
 import { updateDisplayName, updatePhotoUrl } from "@/features/auth/authFunctions";
 import { useQueryClient } from "@tanstack/react-query";
 import { RoleToggle } from "./RoleToggle";
+import { PhotoCropDialog } from "./PhotoCropDialog";
 
 export function ProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -28,6 +32,7 @@ export function ProfilePage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [nameSaving, setNameSaving] = useState(false);
   const [photoSaving, setPhotoSaving] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialName = useRef("");
 
@@ -56,19 +61,31 @@ export function ProfilePage() {
     return () => clearTimeout(timer);
   }, [displayName, profile, queryClient]);
 
-  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !profile) return;
+    if (!file) return;
     e.target.value = "";
+    const objectUrl = URL.createObjectURL(file);
+    setCropSrc(objectUrl);
+  }
+
+  async function handleCropConfirm(blob: Blob) {
+    if (!profile) return;
+    setCropSrc(null);
     setPhotoSaving(true);
     try {
-      const url = await updatePhotoUrl(profile.userId, file);
+      const url = await updatePhotoUrl(profile.userId, blob);
       setPhotoUrl(url);
       await queryClient.invalidateQueries({ queryKey: ["userProfile", profile.userId] });
       await queryClient.invalidateQueries({ queryKey: ["familyMembers", profile.familyId] });
     } finally {
       setPhotoSaving(false);
     }
+  }
+
+  function handleCropCancel() {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
   }
 
   if (isLoading) {
@@ -102,6 +119,13 @@ export function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 p-6">
+      {cropSrc && (
+        <PhotoCropDialog
+          imageSrc={cropSrc}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
+      )}
       {/* Header */}
       <div className="flex items-center gap-4">
         <div className="relative shrink-0">
@@ -174,6 +198,20 @@ export function ProfilePage() {
         <h2 className="text-lg font-semibold text-foreground">Meal task history</h2>
         <p className="text-sm text-muted-foreground">Coming soon.</p>
       </section>
+
+      {/* Sign out — mobile only (desktop uses sidebar) */}
+      {isOwnProfile && (
+        <div className="md:hidden pt-2">
+          <Separator className="mb-6" />
+          <Button
+            variant="ghost"
+            className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => signOut(auth)}
+          >
+            Sign out
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -142,11 +142,11 @@ export function MealCard({
         <div className="flex items-center gap-1">
           <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <UtensilsCrossed className="h-6 w-6 text-primary shrink-0" />
-              <h2 className="text-2xl font-bold truncate">
+              <UtensilsCrossed className="h-5 w-5 text-primary shrink-0" />
+              <h2 className="text-xl font-semibold truncate">
                 {format(
                   new Date(meal.date + "T00:00:00"),
-                  isToday ? "'Today''s meal'" : "EEE, MMM d",
+                  isToday ? "'Dinner'" : "EEE, MMM d",
                 )}
               </h2>
             </div>
@@ -193,6 +193,8 @@ export function MealCard({
             <img
               src={mealPrepIllustration}
               alt="Meal prep illustration"
+              width={1247}
+              height={848}
               className="w-full max-w-90 rounded-lg object-cover"
             />
             <div className="space-y-2 w-full">

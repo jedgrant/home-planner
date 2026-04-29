@@ -46,7 +46,7 @@ export function InviteManagementCard({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-foreground">Invite codes</h3>
+        <h2 className="text-base font-medium text-foreground">Invite codes</h2>
         <div className="flex gap-2">
           <Button
             size="sm"

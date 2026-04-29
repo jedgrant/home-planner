@@ -87,8 +87,8 @@ export function ParentTodayMealCard({
         <div className={`rounded-xl border p-4 space-y-3 ${isToday(parseISO(date)) ? 'border-primary/50 bg-primary/5' : 'border-border bg-card'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <UtensilsCrossed className="h-6 w-6 text-primary shrink-0" />
-              <h2 className="text-2xl font-bold">{isToday(parseISO(date)) ? "Today's meal" : format(parseISO(date), 'EEE, MMM d')}</h2>
+              <UtensilsCrossed className="h-5 w-5 text-primary shrink-0" />
+              <h2 className="text-xl font-semibold">{isToday(parseISO(date)) ? "Dinner" : format(parseISO(date), 'EEE, MMM d')}</h2>
             </div>
             {(hasPrev || hasNext) && (
               <div className="flex items-center gap-1">
@@ -115,6 +115,8 @@ export function ParentTodayMealCard({
             <img
               src={mealPrepIllustration}
               alt="Meal prep illustration"
+              width={1247}
+              height={848}
               className="w-full max-w-75 rounded-lg object-cover"
             />
             <div className="space-y-2 w-full">

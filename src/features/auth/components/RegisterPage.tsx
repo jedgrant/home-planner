@@ -8,7 +8,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/shared/components/ui/form'
 import { Input } from '@/shared/components/ui/input'
@@ -21,6 +20,7 @@ import {
   CardDescription,
 } from '@/shared/components/ui/card'
 import { signUp } from '../authFunctions'
+import { AuthLayout } from './AuthLayout'
 
 const schema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters.').max(40),
@@ -58,12 +58,12 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm rounded-xl shadow-sm">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-xl font-semibold">Create an account</CardTitle>
+    <AuthLayout>
+      <Card className="relative z-10 w-full max-w-sm rounded-xl shadow-lg bg-background/85 backdrop-blur-sm md:bg-card md:backdrop-blur-none">
+        <CardHeader className="space-y-0 gap-0 pb-4">
+          <CardTitle className="text-2xl font-semibold mb-0">Create an account</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            Get started with Home Manager
+            Get started with Haven
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -74,9 +74,8 @@ export function RegisterPage() {
                 name="displayName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Your name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Jed" autoComplete="name" {...field} />
+                      <Input placeholder="Your name" autoComplete="name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -87,11 +86,10 @@ export function RegisterPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="you@example.com"
+                        placeholder="Email"
                         autoComplete="email"
                         {...field}
                       />
@@ -105,11 +103,10 @@ export function RegisterPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
-                        placeholder="At least 8 characters"
+                        placeholder="Password (at least 8 characters)"
                         autoComplete="new-password"
                         {...field}
                       />
@@ -123,6 +120,7 @@ export function RegisterPage() {
               )}
               <Button
                 type="submit"
+                size="xl"
                 className="w-full"
                 disabled={form.formState.isSubmitting}
               >
@@ -138,6 +136,6 @@ export function RegisterPage() {
           </p>
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   )
 }

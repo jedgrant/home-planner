@@ -104,7 +104,7 @@ export function ChoresPage() {
       {/* Loading skeletons */}
       {isLoading && (
         <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
+          {[1, 2].map((i) => (
             <Skeleton key={i} className="h-40 w-full" />
           ))}
         </div>

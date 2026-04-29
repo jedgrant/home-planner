@@ -136,12 +136,24 @@
     --sidebar-ring: oklch(0.63 0.145 155);
 }
 
+@layer utilities {
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pb-nav-safe {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-sidebar text-foreground;
   }
   html {
     @apply font-sans;

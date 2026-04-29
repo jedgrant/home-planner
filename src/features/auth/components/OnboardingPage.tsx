@@ -14,17 +14,11 @@ import {
 } from '@/shared/components/ui/form'
 import { Input } from '@/shared/components/ui/input'
 import { Button } from '@/shared/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/shared/components/ui/card'
 import { useAuthStore } from '@/shared/lib/authStore'
 import { createFamily, joinFamilyWithCode } from '../familyFunctions'
 import { signOut } from 'firebase/auth'
 import { auth } from '@/shared/lib/firebase'
+import { AuthLayout } from './AuthLayout'
 
 type Tab = 'create' | 'join'
 
@@ -87,55 +81,50 @@ export function OnboardingPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold text-foreground">Welcome!</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Set up your family to get started.
-          </p>
-        </div>
+    <AuthLayout>
+      <div className="w-full max-w-sm space-y-3">
+        {/* Main card */}
+        <div className="rounded-xl bg-background/85 shadow-lg backdrop-blur-sm md:bg-card md:backdrop-blur-none overflow-hidden">
+          <div className="px-6 pt-6 pb-4">
+            <h2 className="text-2xl font-semibold text-foreground">Set up your family</h2>
+            <p className="text-sm text-muted-foreground">
+              Create a new family or join one with an invite code.
+            </p>
+          </div>
 
-        {/* Tab toggle */}
-        <div className="flex rounded-lg border border-border bg-muted p-1">
-          <button
-            type="button"
-            onClick={() => { setTab('create'); setServerError('') }}
-            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              tab === 'create'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Create a family
-          </button>
-          <button
-            type="button"
-            onClick={() => { setTab('join'); setServerError('') }}
-            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              tab === 'join'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Join with code
-          </button>
-        </div>
+          {/* Tab toggle */}
+          <div className="px-6 pb-4">
+            <div className="flex rounded-lg border border-border bg-muted p-1">
+              <button
+                type="button"
+                onClick={() => { setTab('create'); setServerError('') }}
+                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  tab === 'create'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Create a family
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTab('join'); setServerError('') }}
+                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  tab === 'join'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Join with code
+              </button>
+            </div>
+          </div>
 
-        {tab === 'create' && (
-          <Card className="rounded-xl shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Create a family</CardTitle>
-              <CardDescription className="text-sm text-muted-foreground">
-                You'll be the parent admin and can invite others.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          {/* Form area */}
+          <div className="px-6 pb-6 space-y-4">
+            {tab === 'create' && (
               <Form {...createForm}>
-                <form
-                  onSubmit={createForm.handleSubmit(onCreateFamily)}
-                  className="space-y-4"
-                >
+                <form onSubmit={createForm.handleSubmit(onCreateFamily)} className="space-y-4">
                   <FormField
                     control={createForm.control}
                     name="familyName"
@@ -143,7 +132,7 @@ export function OnboardingPage() {
                       <FormItem>
                         <FormLabel>Family name</FormLabel>
                         <FormControl>
-                          <Input placeholder="The Grants" {...field} />
+                          <Input placeholder="The Smiths" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -154,6 +143,7 @@ export function OnboardingPage() {
                   )}
                   <Button
                     type="submit"
+                    size="xl"
                     className="w-full"
                     disabled={createForm.formState.isSubmitting}
                   >
@@ -161,24 +151,11 @@ export function OnboardingPage() {
                   </Button>
                 </form>
               </Form>
-            </CardContent>
-          </Card>
-        )}
+            )}
 
-        {tab === 'join' && (
-          <Card className="rounded-xl shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Join a family</CardTitle>
-              <CardDescription className="text-sm text-muted-foreground">
-                Enter the invite code a family parent shared with you.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+            {tab === 'join' && (
               <Form {...joinForm}>
-                <form
-                  onSubmit={joinForm.handleSubmit(onJoinFamily)}
-                  className="space-y-4"
-                >
+                <form onSubmit={joinForm.handleSubmit(onJoinFamily)} className="space-y-4">
                   <FormField
                     control={joinForm.control}
                     name="code"
@@ -201,6 +178,7 @@ export function OnboardingPage() {
                   )}
                   <Button
                     type="submit"
+                    size="xl"
                     className="w-full"
                     disabled={joinForm.formState.isSubmitting || joining}
                   >
@@ -208,21 +186,24 @@ export function OnboardingPage() {
                   </Button>
                 </form>
               </Form>
-            </CardContent>
-          </Card>
-        )}
-
-        <p className="text-center text-xs text-muted-foreground">
+            )}
+            {/* Sign out */}
+        <p className="text-center text-sm text-muted-foreground">
           Wrong account?{' '}
           <button
             type="button"
             onClick={() => signOut(auth)}
-            className="underline underline-offset-4 hover:text-foreground transition-colors"
+            className="text-primary hover:underline transition-colors"
           >
             Sign out
           </button>
         </p>
+          </div>
+          
+        </div>
+
+        
       </div>
-    </div>
+    </AuthLayout>
   )
 }
