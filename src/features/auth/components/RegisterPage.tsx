@@ -59,7 +59,7 @@ export function RegisterPage() {
 
   return (
     <AuthLayout>
-      <Card className="relative z-10 w-full max-w-sm rounded-xl shadow-lg bg-background/85 backdrop-blur-sm md:bg-card md:backdrop-blur-none">
+      <Card className="relative z-10 w-full max-w-sm rounded-xl shadow-lg bg-background/80 md:bg-background/65 backdrop-blur-sm">
         <CardHeader className="space-y-0 gap-0 pb-4">
           <CardTitle className="text-2xl font-semibold mb-0">Create an account</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">

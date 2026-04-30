@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { motion } from "motion/react";
 import familyHugImg from "@/assets/illustration-family-hug-outdoors.jpg";
+import choresIllustrationImg from "@/assets/illustration-chores.png";
 import { AppLogo } from "@/shared/components/AppLogo";
 
 interface AuthLayoutProps {
@@ -25,6 +26,14 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         alt=""
         aria-hidden="true"
         className="md:hidden fixed inset-0 cover object-center"
+      />
+
+      {/* Full-bleed background — desktop only */}
+      <img
+        src={choresIllustrationImg}
+        alt=""
+        aria-hidden="true"
+        className="hidden md:block fixed inset-0 w-full h-full object-cover object-center opacity-30 blur-sm"
       />
 
       {/* App logo — top centre on all breakpoints, below status bar */}

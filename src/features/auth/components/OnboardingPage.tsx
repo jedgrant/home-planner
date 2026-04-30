@@ -94,7 +94,7 @@ export function OnboardingPage() {
     <AuthLayout>
       <div className="w-full max-w-sm space-y-3">
         {/* Main card */}
-        <div className="rounded-xl bg-background/85 shadow-lg backdrop-blur-sm md:bg-card md:backdrop-blur-none overflow-hidden">
+        <div className="rounded-xl bg-background/80 md:bg-background/65 shadow-lg backdrop-blur-sm overflow-hidden">
           <div className="px-6 pt-6 pb-4">
             <h2 className="text-2xl font-semibold text-foreground">Set up your family</h2>
             <p className="text-sm text-muted-foreground">

@@ -51,11 +51,11 @@ export function LoginPage() {
 
   return (
     <AuthLayout>
-      <Card className="w-full max-w-sm rounded-xl bg-background/85 shadow-lg backdrop-blur-sm md:bg-card md:backdrop-blur-none">
+      <Card className="w-full max-w-sm rounded-xl bg-background/80 md:bg-background/65 shadow-lg backdrop-blur-sm">
         <CardHeader className="space-y-1 pb-4">
           <CardTitle className="text-2xl font-semibold -mb-0.5">Sign in</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            Welcome back to Haven
+            Welcome back to Haven asd as
           </CardDescription>
         </CardHeader>
         <CardContent>

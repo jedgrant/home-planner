@@ -62,7 +62,7 @@ export function ClaimProfilePage() {
   return (
     <AuthLayout>
       <div className="w-full max-w-sm space-y-3">
-        <div className="rounded-xl bg-background/85 shadow-lg backdrop-blur-sm md:bg-card md:backdrop-blur-none px-6 py-6 space-y-4">
+        <div className="rounded-xl bg-background/80 md:bg-background/65 shadow-lg backdrop-blur-sm px-6 py-6 space-y-4">
           <div>
             <h2 className="text-2xl font-semibold text-foreground">
               Is this you?
