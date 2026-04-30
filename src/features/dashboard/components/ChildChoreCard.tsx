@@ -100,7 +100,7 @@ export function ChildChoreCard({
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto pt-safe">
           <div className="space-y-6 p-5 pt-3">
             {memberAssignments.map(([groupId, assignment], index) => (
               <ChoreGroupSection

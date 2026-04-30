@@ -123,7 +123,7 @@ export function SuggestEntreeSheet({ meal, open, onOpenChange }: SuggestEntreeSh
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md flex flex-col">
+      <SheetContent className="w-full sm:max-w-md flex flex-col pt-safe">
         <SheetHeader>
           <SheetTitle className="text-xl">Suggest an Entrée</SheetTitle>
           <SheetDescription>

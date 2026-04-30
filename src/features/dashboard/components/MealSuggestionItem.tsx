@@ -111,8 +111,8 @@ export function MealSuggestionItem({
           <span className="text-sm font-medium text-foreground truncate">
             {suggestion.name}
           </span>
-
-          <p className="text-xs text-muted-foreground">
+          
+          <p className="hidden md:block text-xs text-muted-foreground">
             suggested by {suggestion.suggestedByName}
           </p>
         </div>

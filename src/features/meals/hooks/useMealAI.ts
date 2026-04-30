@@ -66,3 +66,44 @@ export function useAIAssignTasks() {
     },
   })
 }
+
+// ─── Suggest Meals ────────────────────────────────────────────────────────────
+
+export interface AIMealSide {
+  name: string
+  recipeId: string | null
+  isFromRecipes: boolean
+}
+
+export interface AIMealIdea {
+  ideaId: string
+  title: string
+  entree: {
+    name: string
+    recipeId: string | null
+    isFromRecipes: boolean
+    lastServedDate: string | null
+  }
+  sides: AIMealSide[]
+  rationale: string
+}
+
+interface SuggestMealsInput {
+  familyId: string
+  mealStyle: 'quick' | 'full'
+  cuisinePreference: string
+}
+
+interface SuggestMealsOutput {
+  ideas: AIMealIdea[]
+}
+
+export function useAISuggestMeals() {
+  return useMutation({
+    mutationFn: async (input: SuggestMealsInput) => {
+      const fn = httpsCallable<SuggestMealsInput, SuggestMealsOutput>(functions, 'suggestMeals')
+      const result = await fn(input)
+      return result.data
+    },
+  })
+}

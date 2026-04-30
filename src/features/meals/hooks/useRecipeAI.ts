@@ -16,6 +16,7 @@ interface SuggestRecipeOutput {
 
 interface SuggestTasksInput {
   recipeName: string
+  componentName?: string
   ingredients: { name: string; quantity: string }[]
   notes: string
 }

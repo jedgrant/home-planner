@@ -8,6 +8,7 @@ import {
   ChevronUp,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import mealPrepIllustration from "@/assets/illustration-meal-prep.png";
@@ -15,6 +16,7 @@ import { MealTaskRow } from "./MealTaskRow";
 import { MealRecipeList } from "./MealRecipeList";
 import { MealSuggestionItem } from "./MealSuggestionItem";
 import { SuggestEntreeDialog } from "./SuggestEntreeDialog";
+import { AISuggestMealsSheet } from "@/features/meals/components/AISuggestMealsSheet";
 import {
   useVoteMealSuggestion,
   useAcceptMealSuggestion,
@@ -58,6 +60,7 @@ export function MealCard({
 }: MealCardProps) {
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [tasksExpanded, setTasksExpanded] = useState(false);
+  const [aiSuggestOpen, setAiSuggestOpen] = useState(false);
   // Optimistic local meal created on-the-fly before the query refetches
   const [localMeal, setLocalMeal] = useState<Meal | null>(null);
 
@@ -128,6 +131,37 @@ export function MealCard({
           };
           setLocalMeal(newMeal);
           setSuggestOpen(true);
+        },
+      },
+    );
+  }
+
+  function handleOpenAISuggest() {
+    if (!user || !isParent) return;
+    if (activeMeal) {
+      setAiSuggestOpen(true);
+      return;
+    }
+    // No meal yet — create one on-the-fly then open the AI sheet
+    createMeal.mutate(
+      { name: "Dinner", date, createdBy: user.uid },
+      {
+        onSuccess: (mealId) => {
+          const newMeal: Meal = {
+            mealId,
+            familyId,
+            name: "Dinner",
+            date,
+            status: "planned",
+            servedAt: null,
+            items: [],
+            suggestions: [],
+            createdBy: user.uid,
+            createdAt: null as unknown as Timestamp,
+            updatedAt: null as unknown as Timestamp,
+          };
+          setLocalMeal(newMeal);
+          setAiSuggestOpen(true);
         },
       },
     );
@@ -296,15 +330,40 @@ export function MealCard({
                 <p className="text-sm font-medium text-foreground">
                   Suggestions
                 </p>
-                <Button
-                  variant="ghost"
-                  onClick={handleAddSuggestion}
-                  disabled={createMeal.isPending}
-                  className="h-7 px-2 text-xs text-primary"
-                >
-                  <Lightbulb className="h-3.5 w-3.5 mr-1" />
-                  Add suggestion
-                </Button>
+                <div className="flex items-center gap-1">
+                  {isParent && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleOpenAISuggest}
+                        disabled={createMeal.isPending}
+                        className="h-7 w-7 text-primary sm:hidden"
+                        aria-label="AI meal ideas"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={handleOpenAISuggest}
+                        disabled={createMeal.isPending}
+                        className="hidden sm:flex h-7 px-2 text-xs text-primary"
+                      >
+                        <Sparkles className="h-3.5 w-3.5 mr-1" />
+                        AI Ideas
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="ghost"
+                    onClick={handleAddSuggestion}
+                    disabled={createMeal.isPending}
+                    className="h-7 px-2 text-xs text-primary"
+                  >
+                    <Lightbulb className="h-3.5 w-3.5 mr-1" />
+                    Add suggestion
+                  </Button>
+                </div>
               </div>
               <p className="text-sm text-muted-foreground">
                 No suggestions yet
@@ -332,14 +391,37 @@ export function MealCard({
                     <p className="text-md font-medium text-foreground">
                       Suggestions
                     </p>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setSuggestOpen(true)}
-                      className="h-7 px-2 text-xs text-primary"
-                    >
-                      <Lightbulb className="h-3.5 w-3.5 mr-1" />
-                      Add suggestion
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {isParent && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleOpenAISuggest}
+                            className="h-7 w-7 text-primary sm:hidden"
+                            aria-label="AI meal ideas"
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={handleOpenAISuggest}
+                            className="hidden sm:flex h-7 px-2 text-xs text-primary"
+                          >
+                            <Sparkles className="h-3.5 w-3.5 mr-1" />
+                            AI Ideas
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        variant="ghost"
+                        onClick={() => setSuggestOpen(true)}
+                        className="h-7 px-2 text-xs text-primary"
+                      >
+                        <Lightbulb className="h-3.5 w-3.5 mr-1" />
+                        Add suggestion
+                      </Button>
+                    </div>
                   </div>
                   {pendingSuggestions.length > 0 ? (
                     pendingSuggestions.map((s) => (
@@ -442,6 +524,14 @@ export function MealCard({
           meal={activeMeal}
           open={suggestOpen}
           onOpenChange={setSuggestOpen}
+        />
+      )}
+
+      {activeMeal && isParent && (
+        <AISuggestMealsSheet
+          meal={activeMeal}
+          open={aiSuggestOpen}
+          onOpenChange={setAiSuggestOpen}
         />
       )}
     </>

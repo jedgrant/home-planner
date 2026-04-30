@@ -36,7 +36,7 @@ export function DishRecipeSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-lg overflow-y-auto gap-0"
+        className="w-full sm:max-w-lg overflow-y-auto gap-0 pt-safe"
       >
         <SheetHeader className="flex flex-row items-center justify-between pr-12 pb-0 pt-3">
           <SheetTitle className="text-xl">{item?.name ?? "Recipe"}</SheetTitle>

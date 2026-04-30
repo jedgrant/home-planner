@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Pencil, Trash2, Check, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
@@ -44,10 +44,6 @@ export function ChoreGroupCard({
   const [newChoreName, setNewChoreName] = useState("");
   const [addingSaving, setAddingSaving] = useState(false);
   const addNameRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    addNameRef.current?.focus();
-  }, []);
 
   async function commitAddChore() {
     const trimmed = newChoreName.trim();

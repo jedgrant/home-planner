@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { addDays, startOfDay, format, eachDayOfInterval } from 'date-fns'
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { useAuthStore } from '@/shared/lib/authStore'
 import { useMeals, useCreateMeal } from '../hooks/useMeals'
@@ -101,14 +101,6 @@ export function MealsPage() {
           />
         ))}
       </div>
-
-      {/* AI suggest placeholder banner */}
-      {isParent && (
-        <div className="rounded-xl border border-dashed p-4 flex items-center gap-3 text-sm text-muted-foreground">
-          <Sparkles className="h-4 w-4 shrink-0 text-primary" />
-          <span>AI dinner suggestions will be available in the next update.</span>
-        </div>
-      )}
     </div>
   )
 }

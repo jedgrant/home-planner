@@ -39,6 +39,7 @@ import {
 } from "../hooks/useMeals";
 import { MealSuggestionItem, SuggestEntreeDialog } from "@/features/dashboard";
 import { useAIAssignTasks } from "../hooks/useMealAI";
+import { AISuggestMealsSheet } from "./AISuggestMealsSheet";
 import { MealItemSection } from "./MealItemSection";
 import { MealTaskRow } from "./MealTaskRow";
 import { CleanupDishesRow } from "./CleanupDishesRow";
@@ -106,6 +107,7 @@ export function MealDetailPage() {
   const [addFromRecipesOpen, setAddFromRecipesOpen] = useState(false);
   const [selectedRecipeId, setSelectedRecipeId] = useState("");
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const [aiSuggestOpen, setAiSuggestOpen] = useState(false);
   const [recipeSheetItem, setRecipeSheetItem] = useState<MealItem | null>(null);
   const [aiProposal, setAiProposal] = useState<
     ReturnType<typeof useAIAssignTasks>["data"] | null
@@ -434,15 +436,39 @@ export function MealDetailPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="font-medium">Suggested entrées</h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-primary"
-                  onClick={() => setSuggestOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add suggestion
-                </Button>
+                <div className="flex items-center gap-2">
+                  {isParent && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-primary sm:hidden"
+                        onClick={() => setAiSuggestOpen(true)}
+                        aria-label="AI meal ideas"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="hidden sm:flex text-primary"
+                        onClick={() => setAiSuggestOpen(true)}
+                      >
+                        <Sparkles className="h-4 w-4 mr-1" />
+                        AI Ideas
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-primary"
+                    onClick={() => setSuggestOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add suggestion
+                  </Button>
+                </div>
               </div>
               {pendingSuggestions.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -730,6 +756,15 @@ export function MealDetailPage() {
         open={suggestOpen}
         onOpenChange={setSuggestOpen}
       />
+
+      {/* AI meal suggestions sheet */}
+      {isParent && (
+        <AISuggestMealsSheet
+          meal={m}
+          open={aiSuggestOpen}
+          onOpenChange={setAiSuggestOpen}
+        />
+      )}
 
       {/* Dish recipe sheet */}
       <DishRecipeSheet

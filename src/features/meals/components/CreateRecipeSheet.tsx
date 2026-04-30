@@ -239,7 +239,7 @@ export function CreateRecipeSheet({
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto pt-safe">
         <SheetHeader className="border-b border-b-olive-400/70">
           <SheetTitle>New Recipe</SheetTitle>
         </SheetHeader>
@@ -371,7 +371,7 @@ export function CreateRecipeSheet({
 
                   {parseMutation.isError && (
                     <p className="text-sm text-destructive">
-                      Parsing failed. Check your content and try again.
+                      {(parseMutation.error as { message?: string })?.message ?? 'Parsing failed. Check your content and try again.'}
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground text-center">

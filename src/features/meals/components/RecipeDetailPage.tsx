@@ -164,45 +164,47 @@ export function RecipeDetailPage() {
 
   async function handleAISuggestTasks() {
     if (!recipe) return;
-    const allIngredients = recipe.components.flatMap((c) => c.ingredients);
-    const result = await aiSuggestTasks.mutateAsync({
-      recipeName: recipe.name,
-      ingredients: allIngredients.map((i) => ({
-        name: i.name,
-        quantity: i.quantity,
-      })),
-      notes: recipe.description,
+    // Only generate tasks for components that don't already have any
+    const componentsNeedingTasks = components.filter(
+      (c) => c.tasks.length === 0,
+    );
+    if (componentsNeedingTasks.length === 0) return;
+
+    const callFn = aiSuggestTasks.mutateAsync;
+    const results = await Promise.all(
+      componentsNeedingTasks.map((c) =>
+        callFn({
+          recipeName: recipe.name,
+          componentName: c.name !== recipe.name ? c.name : undefined,
+          ingredients: c.ingredients.map((i) => ({
+            name: i.name,
+            quantity: i.quantity,
+          })),
+          notes: recipe.description,
+        }),
+      ),
+    );
+
+    const tasksByComponentId = new Map(
+      componentsNeedingTasks.map((c, i) => [
+        c.componentId,
+        results[i].prepTasks,
+      ]),
+    );
+
+    const next: RecipeComponent[] = components.map((c) => {
+      const newTasks = tasksByComponentId.get(c.componentId);
+      if (!newTasks) return c;
+      return {
+        ...c,
+        tasks: newTasks.map((t, i) => ({
+          taskId: nanoid(),
+          description: t.description,
+          order: i,
+        })),
+      };
     });
-    // Append suggested tasks to the first component, or create one if none exist
-    const newTasks = result.prepTasks.map((t, i) => ({
-      taskId: nanoid(),
-      description: t.description,
-      order: i,
-    }));
-    const next: RecipeComponent[] =
-      components.length > 0
-        ? components.map((c, i) =>
-            i === 0
-              ? {
-                  ...c,
-                  tasks: [
-                    ...c.tasks,
-                    ...newTasks.map((t, j) => ({
-                      ...t,
-                      order: c.tasks.length + j,
-                    })),
-                  ],
-                }
-              : c,
-          )
-        : [
-            {
-              componentId: nanoid(),
-              name: recipe.name,
-              ingredients: [],
-              tasks: newTasks,
-            },
-          ];
+
     setComponents(next);
     void saveToFirestore(next);
   }
@@ -300,15 +302,15 @@ export function RecipeDetailPage() {
     <div className="p-6 max-w-4xl mx-auto">
       <div>
         {/* Back link */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mb-2 -ml-2"
-              onClick={() => navigate("/recipes")}
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              All Recipes
-            </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mb-2 -ml-2"
+          onClick={() => navigate("/recipes")}
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          All Recipes
+        </Button>
         {/* Header */}
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0 space-y-3">
@@ -320,11 +322,13 @@ export function RecipeDetailPage() {
                 onChange={(e) => setNameVal(e.target.value)}
                 onBlur={() => void handleNameBlur()}
                 onKeyDown={handleNameKeyDown}
-                className="font-heading text-3xl font-semibold text-foreground bg-transparent border-b border-transparent hover:text-primary focus:border-primary focus:outline-none leading-tight transition-colors cursor-text"
+                className="w-full truncate font-heading text-3xl font-semibold text-foreground bg-transparent border-b border-transparent hover:text-primary focus:border-primary focus:outline-none leading-tight transition-colors cursor-text"
                 aria-label="Recipe name"
               />
             ) : (
-              <h1 className="text-3xl font-semibold text-foreground">{recipe.name}</h1>
+              <h1 className="text-3xl font-semibold text-foreground">
+                {recipe.name}
+              </h1>
             )}
 
             {/* Meta row: Type, Serves, visibility */}
@@ -337,14 +341,22 @@ export function RecipeDetailPage() {
                   </span>
                   <Select
                     value={recipe.courseType}
-                    onValueChange={(v) => void handleCourseTypeChange(v as CourseType)}
+                    onValueChange={(v) =>
+                      void handleCourseTypeChange(v as CourseType)
+                    }
                   >
                     <SelectTrigger className="border-0 rounded-none shadow-none h-9 gap-1.5 px-2.5 focus:ring-0">
-                      <SelectValue>{courseLabels[recipe.courseType]}</SelectValue>
+                      <SelectValue>
+                        {courseLabels[recipe.courseType]}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {(Object.entries(courseLabels) as [CourseType, string][]).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      {(
+                        Object.entries(courseLabels) as [CourseType, string][]
+                      ).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -376,16 +388,32 @@ export function RecipeDetailPage() {
                     onCheckedChange={() => void handleToggleVisibility()}
                     disabled={visibilityMutation.isPending}
                   />
-                  <Label htmlFor="recipe-visibility" className="text-sm cursor-pointer">
+                  <Label
+                    htmlFor="recipe-visibility"
+                    className="text-sm cursor-pointer"
+                  >
                     {recipe.visibility === "global" ? "Public" : "Private"}
                   </Label>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => setShowArchiveDialog(true)}
+                >
+                  <Archive className="h-4 w-4 mr-1" />
+                  Archive
+                </Button>
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{courseLabels[recipe.courseType]}</Badge>
+                <Badge variant="secondary">
+                  {courseLabels[recipe.courseType]}
+                </Badge>
                 {recipe.servingSize > 0 && (
-                  <span className="text-sm text-muted-foreground">Serves {recipe.servingSize}</span>
+                  <span className="text-sm text-muted-foreground">
+                    Serves {recipe.servingSize}
+                  </span>
                 )}
               </div>
             )}
@@ -405,15 +433,6 @@ export function RecipeDetailPage() {
                   Saved
                 </span>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-destructive"
-                onClick={() => setShowArchiveDialog(true)}
-              >
-                <Archive className="h-4 w-4 mr-1" />
-                Archive
-              </Button>
             </div>
           )}
         </div>

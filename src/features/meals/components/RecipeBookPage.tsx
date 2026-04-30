@@ -118,7 +118,7 @@ export function RecipeBookPage() {
       <Tabs defaultValue="family" className="mt-6">
         <TabsList>
           <TabsTrigger value="family">Our Recipes</TabsTrigger>
-          <TabsTrigger value="global">Global Library</TabsTrigger>
+          <TabsTrigger value="global">Public Recipes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="family" className="mt-4">

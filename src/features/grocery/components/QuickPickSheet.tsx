@@ -101,7 +101,7 @@ export function QuickPickSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[85vh] flex flex-col">
+        <SheetContent side="bottom" className="h-[85vh] flex flex-col pt-safe">
           <SheetHeader className="shrink-0">
             <SheetTitle>Quick Pick — {store.name}</SheetTitle>
           </SheetHeader>
