@@ -258,6 +258,27 @@ export async function addPendingProfile(
   return { ...profileData, createdAt: Timestamp.now(), updatedAt: Timestamp.now() } as PendingProfile
 }
 
+export async function updatePendingProfile(
+  familyId: string,
+  profileId: string,
+  params: { displayName?: string; photoBlob?: Blob },
+): Promise<Partial<PendingProfile>> {
+  const updates: Record<string, unknown> = { updatedAt: serverTimestamp() }
+
+  if (params.displayName !== undefined) {
+    updates.displayName = params.displayName
+  }
+
+  if (params.photoBlob) {
+    const fileRef = storageRef(storage, `avatars/pending/${profileId}`)
+    await uploadBytes(fileRef, params.photoBlob)
+    updates.photoUrl = await getDownloadURL(fileRef)
+  }
+
+  await updateDoc(doc(db, pendingProfilesCol(familyId), profileId), updates)
+  return updates as Partial<PendingProfile>
+}
+
 export async function deletePendingProfile(
   familyId: string,
   profileId: string,

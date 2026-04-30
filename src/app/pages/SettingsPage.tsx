@@ -30,6 +30,8 @@ import {
 import { InviteManagementCard } from "@/features/auth/components/InviteManagementCard";
 import { AddMemberDialog } from "@/features/auth/components/AddMemberDialog";
 import { DeleteFamilySection } from "@/features/auth/components/DeleteFamilySection";
+import { EditPendingProfileDialog } from "@/features/auth/components/EditPendingProfileDialog";
+import type { PendingProfile } from "@/shared/types";
 import {
   renameFamilyName,
   removeMember,
@@ -57,6 +59,7 @@ export function SettingsPage() {
 
   const [renameSaved, setRenameSaved] = useState(false);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [editingPending, setEditingPending] = useState<PendingProfile | null>(null);
 
   const renameForm = useForm<RenameValues>({
     resolver: zodResolver(renameSchema),
@@ -251,7 +254,11 @@ export function SettingsPage() {
                     key={p.id}
                     className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 opacity-70"
                   >
-                    <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity"
+                      onClick={() => setEditingPending(p)}
+                    >
                       <Avatar className="h-8 w-8">
                         <AvatarImage
                           src={p.photoUrl ?? undefined}
@@ -269,7 +276,7 @@ export function SettingsPage() {
                           {p.role}
                         </p>
                       </div>
-                    </div>
+                    </button>
                     <div className="flex items-center gap-2">
                       <Badge
                         variant="outline"
@@ -302,6 +309,15 @@ export function SettingsPage() {
           familyId={user.familyId}
           createdBy={user.uid}
           onOpenChange={setAddMemberOpen}
+        />
+      )}
+
+      {editingPending && user?.familyId && (
+        <EditPendingProfileDialog
+          open
+          onOpenChange={(open) => { if (!open) setEditingPending(null); }}
+          profile={editingPending}
+          familyId={user.familyId}
         />
       )}
 
