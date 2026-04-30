@@ -46,7 +46,7 @@ export function MealsPage() {
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-semibold">Dinner Planner</h1>
+        <h1 className="text-2xl md:text-3xl font-semibold">Meal Plans</h1>
         <p className="text-sm text-muted-foreground">
           Plan and track your family&apos;s dinners
         </p>

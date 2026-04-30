@@ -146,6 +146,9 @@
   .pb-nav-safe {
     padding-bottom: calc(4rem + env(safe-area-inset-bottom));
   }
+  .pt-header-safe {
+    padding-top: calc(3.5rem + env(safe-area-inset-top));
+  }
 }
 
 @layer base {

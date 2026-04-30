@@ -31,9 +31,9 @@ export function MealDayTile({ date, meal }: MealDayTileProps) {
 
       {meal ? (
         <Link to={`/meals/${meal.mealId}`} className="group flex-1 flex flex-col gap-1">
-          {meal.recipes.length > 0 && (
+          {(meal.items ?? []).length > 0 && (
             <p className="text-sm line-clamp-1">
-              {meal.recipes.map((r) => r.recipeName).join(', ')}
+              {(meal.items ?? []).map((i) => i.name).join(', ')}
             </p>
           )}
           <span

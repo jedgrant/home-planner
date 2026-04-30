@@ -6,7 +6,7 @@ import { useChoreGroups } from '@/features/chores/hooks/useChoreGroups'
 import { useOpenChoreAssignments } from '@/features/chores/hooks/useChildChoreAssignments'
 import { ChildChoreAssignmentCard } from '@/features/chores/components/ChildChoreAssignmentCard'
 import { dateToWeekId } from '@/features/chores/utils/rotation'
-import { ParentTodayMealCard } from '@/features/dashboard/components/ParentTodayMealCard'
+import { MealCard } from '@/features/dashboard/components/MealCard'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 
 // ─── Child dashboard page ─────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ export function ChildDashboardPage() {
             <Skeleton className="h-24 w-full rounded-xl" />
           </div>
         ) : (
-          <ParentTodayMealCard
+          <MealCard
             familyId={familyId}
             userId={userId}
             userName={userName}

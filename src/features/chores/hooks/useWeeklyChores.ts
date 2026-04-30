@@ -1,21 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   doc,
-  getDoc,
   onSnapshot,
   setDoc,
   updateDoc,
   serverTimestamp,
   collection,
   getDocs,
+  getDoc,
   query,
   where,
 } from 'firebase/firestore'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { db, storage } from '@/shared/lib/firebase'
-import { weeklyChores, choreGroups } from '@/shared/lib/collections'
+import { weeklyChores, choreGroups, FAMILIES } from '@/shared/lib/collections'
 import type { WeeklyChoreDoc, WeeklyChoreAssignment, ChoreGroup } from '@/shared/types/chores'
-import { getCurrentAssignee, weekIdToStartDate } from '../utils/rotation'
+import { getCurrentAssignee, weekIdToStartDate, dateToWeekId } from '../utils/rotation'
 
 // ─── Real-time weekly chore snapshot ─────────────────────────────────────────
 
@@ -56,7 +56,13 @@ export function useWeeklyChoreDoc(
         setData(weekData)
         setIsLoading(false)
       } else {
-        // Auto-create the week doc from current group state
+        // Don't auto-create docs for past weeks — show empty state instead
+        const currentWeekId = dateToWeekId(new Date())
+        if (weekId < currentWeekId) {
+          setData(null)
+          setIsLoading(false)
+          return
+        }
         await createWeekDoc(familyId, weekId, memberNames)
         // onSnapshot will fire again once the doc is written
       }
@@ -73,9 +79,14 @@ async function createWeekDoc(
   weekId: string,
   memberNames: Record<string, string>,
 ) {
-  const groupsSnap = await getDocs(
-    query(collection(db, choreGroups(familyId)), where('archived', '==', false)),
-  )
+  const [groupsSnap, familySnap] = await Promise.all([
+    getDocs(query(collection(db, choreGroups(familyId)), where('archived', '==', false))),
+    getDoc(doc(db, FAMILIES, familyId)),
+  ])
+
+  const familyData = familySnap.data()
+  const rotationPool: string[] = familyData?.choreRotationPool ?? []
+  const rotationDuration: number = familyData?.choreRotationDurationWeeks ?? 1
 
   const assignments: Record<string, WeeklyChoreAssignment> = {}
   const weekStart = weekIdToStartDate(weekId)
@@ -90,7 +101,7 @@ async function createWeekDoc(
       assigneeId = group.fixedAssignees[0] ?? ''
       assigneeName = memberNames[assigneeId] ?? assigneeId
     } else {
-      assigneeId = getCurrentAssignee(group, weekId)
+      assigneeId = getCurrentAssignee(group, weekId, rotationPool, rotationDuration)
       assigneeName = memberNames[assigneeId] ?? assigneeId
     }
 
@@ -129,6 +140,101 @@ async function createWeekDoc(
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
+}
+
+// ─── Patch an existing week doc with any groups added since it was created ────
+
+export async function patchWeekDoc(
+  familyId: string,
+  weekId: string,
+  memberNames: Record<string, string>,
+): Promise<void> {
+  const [groupsSnap, weekSnap] = await Promise.all([
+    getDocs(query(collection(db, choreGroups(familyId)), where('archived', '==', false))),
+    getDoc(doc(db, weeklyChores(familyId), weekId)),
+  ])
+
+  if (!weekSnap.exists()) {
+    await createWeekDoc(familyId, weekId, memberNames)
+    return
+  }
+
+  const familySnap = await getDoc(doc(db, FAMILIES, familyId))
+  const familyData = familySnap.data()
+  const rotationPool: string[] = familyData?.choreRotationPool ?? []
+  const rotationDuration: number = familyData?.choreRotationDurationWeeks ?? 1
+
+  const existingAssignments = (weekSnap.data() as WeeklyChoreDoc).assignments ?? {}
+  const weekStart = weekIdToStartDate(weekId)
+  const updates: Record<string, unknown> = { updatedAt: serverTimestamp() }
+  let hasPatch = false
+
+  for (const groupDoc of groupsSnap.docs) {
+    const group = { ...groupDoc.data(), groupId: groupDoc.id } as ChoreGroup
+    const existing = existingAssignments[group.groupId]
+
+    if (!existing) {
+      // Group is entirely new — add the full assignment
+      hasPatch = true
+      let assigneeId: string
+      let assigneeName: string
+
+      if (group.assignmentType === 'fixed') {
+        assigneeId = group.fixedAssignees[0] ?? ''
+        assigneeName = memberNames[assigneeId] ?? assigneeId
+      } else {
+        assigneeId = getCurrentAssignee(group, weekId, rotationPool, rotationDuration)
+        assigneeName = memberNames[assigneeId] ?? assigneeId
+      }
+
+      const chores: WeeklyChoreAssignment['chores'] = {}
+      for (const chore of group.chores) {
+        chores[chore.choreId] = {
+          status: 'pending',
+          submittedAt: null,
+          submittedBy: null,
+          mediaUrl: null,
+          verifiedAt: null,
+          verifiedBy: null,
+        }
+      }
+
+      const expectedDueDate = (() => {
+        const d = new Date(weekStart)
+        d.setDate(d.getDate() + 5)
+        return d.toISOString().slice(0, 10)
+      })()
+
+      updates[`assignments.${group.groupId}`] = {
+        assigneeId,
+        assigneeName,
+        groupName: group.name,
+        chores,
+        expectedDueDate,
+        completedAt: null,
+      }
+    } else {
+      // Group already exists — add any chores that were created after the week doc
+      const existingChoreIds = new Set(Object.keys(existing.chores))
+      for (const chore of group.chores) {
+        if (!existingChoreIds.has(chore.choreId)) {
+          hasPatch = true
+          updates[`assignments.${group.groupId}.chores.${chore.choreId}`] = {
+            status: 'pending',
+            submittedAt: null,
+            submittedBy: null,
+            mediaUrl: null,
+            verifiedAt: null,
+            verifiedBy: null,
+          }
+        }
+      }
+    }
+  }
+
+  if (hasPatch) {
+    await updateDoc(doc(db, weeklyChores(familyId), weekId), updates)
+  }
 }
 
 // ─── Submit chore (with optional media upload) ────────────────────────────────

@@ -1,154 +1,168 @@
-import { useMemo, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Zap, ChevronDown, ChevronUp, History, Plus, Undo2, Trash2 } from 'lucide-react'
-import { format } from 'date-fns'
-import { Button } from '@/shared/components/ui/button'
-import { Badge } from '@/shared/components/ui/badge'
-import { Skeleton } from '@/shared/components/ui/skeleton'
-import { Separator } from '@/shared/components/ui/separator'
+import { useMemo, useRef, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  History,
+  Plus,
+  Undo2,
+  Trash2,
+} from "lucide-react";
+import { format } from "date-fns";
+import { Button } from "@/shared/components/ui/button";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Separator } from "@/shared/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
   TooltipProvider,
-} from '@/shared/components/ui/tooltip'
-import { useAuthStore } from '@/shared/lib/authStore'
-import { useStores } from '../hooks/useStores'
-import { useGroceryItems } from '../hooks/useGroceryItems'
-import { useGroceryItemMutations } from '../hooks/useGroceryItemMutations'
-import { useItemNameHistory } from '../hooks/useItemNameHistory'
-import { GroceryItemRow } from './GroceryItemRow'
-import { QuickPickSheet } from './QuickPickSheet'
+} from "@/shared/components/ui/tooltip";
+import { useAuthStore } from "@/shared/lib/authStore";
+import { useStores } from "../hooks/useStores";
+import { useGroceryItems } from "../hooks/useGroceryItems";
+import { useGroceryItemMutations } from "../hooks/useGroceryItemMutations";
+import { useItemNameHistory } from "../hooks/useItemNameHistory";
+import { GroceryItemRow } from "./GroceryItemRow";
+import { QuickPickSheet } from "./QuickPickSheet";
 
 export function StoreListPage() {
-  const { storeId = '' } = useParams<{ storeId: string }>()
-  const navigate = useNavigate()
-  const user = useAuthStore((s) => s.user)
-  const familyId = user?.familyId ?? ''
-  const isParent = user?.role === 'parent'
+  const { storeId = "" } = useParams<{ storeId: string }>();
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const familyId = user?.familyId ?? "";
+  const isParent = user?.role === "parent";
 
-  const { data: storeList = [] } = useStores(familyId)
-  const store = storeList.find((s) => s.storeId === storeId)
+  const { data: storeList = [] } = useStores(familyId);
+  const store = storeList.find((s) => s.storeId === storeId);
 
-  const { items, isLoading } = useGroceryItems(familyId, storeId)
+  const { items, isLoading } = useGroceryItems(familyId, storeId);
   const { addItem, editItem, completeItem, uncompleteItem, removeItem } =
-    useGroceryItemMutations(familyId)
-  const { data: nameHistory = [] } = useItemNameHistory(familyId)
+    useGroceryItemMutations(familyId);
+  const { data: nameHistory = [] } = useItemNameHistory(familyId);
 
-  const [showHistory, setShowHistory] = useState(false)
-  const [quickPickOpen, setQuickPickOpen] = useState(false)
-  const [addName, setAddName] = useState('')
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const addInputRef = useRef<HTMLInputElement>(null)
+  const [showHistory, setShowHistory] = useState(false);
+  const [quickPickOpen, setQuickPickOpen] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const addInputRef = useRef<HTMLInputElement>(null);
 
-  const pendingItems = items.filter((i) => !i.completed)
+  const pendingItems = items.filter((i) => !i.completed);
   const completedItems = useMemo(
     () =>
       items
         .filter((i) => i.completed)
         .sort((a, b) => {
-          const aMs = a.completedAt?.toMillis() ?? 0
-          const bMs = b.completedAt?.toMillis() ?? 0
-          return bMs - aMs
+          const aMs = a.completedAt?.toMillis() ?? 0;
+          const bMs = b.completedAt?.toMillis() ?? 0;
+          return bMs - aMs;
         }),
     [items],
-  )
+  );
 
   const filteredSuggestions = useMemo(() => {
-    if (addName.length < 2) return []
-    const lower = addName.toLowerCase()
-    return nameHistory.filter((n) => n.toLowerCase().includes(lower)).slice(0, 8)
-  }, [addName, nameHistory])
+    if (addName.length < 2) return [];
+    const lower = addName.toLowerCase();
+    return nameHistory
+      .filter((n) => n.toLowerCase().includes(lower))
+      .slice(0, 8);
+  }, [addName, nameHistory]);
 
   // Deduplicated recent chips — one per unique name, most recent first
   const recentChips = useMemo(() => {
-    const seen = new Set<string>()
-    const chips: typeof completedItems = []
+    const seen = new Set<string>();
+    const chips: typeof completedItems = [];
     for (const item of completedItems) {
-      const key = item.name.toLowerCase().trim()
+      const key = item.name.toLowerCase().trim();
       if (!seen.has(key)) {
-        seen.add(key)
-        chips.push(item)
+        seen.add(key);
+        chips.push(item);
       }
-      if (chips.length >= 12) break
+      if (chips.length >= 12) break;
     }
-    return chips
-  }, [completedItems])
+    return chips;
+  }, [completedItems]);
 
-  if (!familyId) return null
+  if (!familyId) return null;
 
   async function handleAdd(nameOverride?: string) {
-    const name = (nameOverride ?? addName).trim()
-    if (!name || !store || !user) return
-    await addItem.mutateAsync({ name, quantity: '1', note: '', storeId, addedBy: user.uid })
-    setAddName('')
-    setShowSuggestions(false)
-    addInputRef.current?.focus()
+    const name = (nameOverride ?? addName).trim();
+    if (!name || !store || !user) return;
+    await addItem.mutateAsync({
+      name,
+      quantity: "1",
+      note: "",
+      storeId,
+      addedBy: user.uid,
+    });
+    setAddName("");
+    setShowSuggestions(false);
+    addInputRef.current?.focus();
   }
 
   function acceptSuggestion(name: string) {
-    setAddName(name)
-    setShowSuggestions(false)
-    handleAdd(name)
+    setAddName(name);
+    setShowSuggestions(false);
+    handleAdd(name);
   }
 
-  async function handleReAdd(item: typeof completedItems[number]) {
-    if (!store || !user) return
+  async function handleReAdd(item: (typeof completedItems)[number]) {
+    if (!store || !user) return;
     await addItem.mutateAsync({
       name: item.name,
       quantity: item.quantity,
       note: item.note,
       storeId,
       addedBy: user.uid,
-    })
+    });
   }
 
   async function handleQuickPickAdd(
-    pickedItems: Array<{ name: string; quantity: string; note: string }>
+    pickedItems: Array<{ name: string; quantity: string; note: string }>,
   ) {
-    if (!store || !user) return
+    if (!store || !user) return;
     await Promise.all(
       pickedItems.map((item) =>
-        addItem.mutateAsync({ ...item, storeId, addedBy: user.uid })
-      )
-    )
+        addItem.mutateAsync({ ...item, storeId, addedBy: user.uid }),
+      ),
+    );
   }
 
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
+      <div>
         <Button
           variant="ghost"
-          size="icon"
-          aria-label="Back to stores"
-          onClick={() => navigate('/grocery')}
+          size="sm"
+          className="-ml-2"
+          onClick={() => navigate("/grocery")}
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          All grocery lists
         </Button>
-        <div className="flex-1">
-          <h1 className="text-xl font-semibold text-foreground">
-            {store?.name ?? 'Store List'}
+
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl flex-1 font-semibold text-foreground truncate">
+            {store?.name ?? "Store List"}
           </h1>
-          {store?.notes && (
-            <p className="text-xs text-muted-foreground">{store.notes}</p>
-          )}
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setQuickPickOpen(true)}
+            >
+              <Zap className="mr-1.5 h-4 w-4" />
+              <span className="hidden md:block">Quick</span> Pick
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {pendingItems.length > 0 && (
-            <Badge variant="secondary" className="rounded-full">
-              {pendingItems.length} remaining
-            </Badge>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setQuickPickOpen(true)}
-          >
-            <Zap className="mr-1.5 h-4 w-4" />
-            Quick Pick
-          </Button>
-        </div>
+        {store?.notes && (
+          <p className="text-xs text-muted-foreground">{store.notes}</p>
+        )}
       </div>
 
       {/* Pending items + inline add */}
@@ -171,18 +185,23 @@ export function StoreListPage() {
                 item={item}
                 isParent={isParent}
                 onComplete={() => {
-                  if (!store) return
+                  if (!store) return;
                   completeItem.mutate({
                     itemId: item.itemId,
                     itemName: item.name,
                     quantity: item.quantity,
                     store,
-                    completedBy: user?.uid ?? '',
-                  })
+                    completedBy: user?.uid ?? "",
+                  });
                 }}
                 onUncomplete={() => uncompleteItem.mutate(item.itemId)}
                 onEdit={(name, quantity, note) =>
-                  editItem.mutateAsync({ itemId: item.itemId, name, quantity, note })
+                  editItem.mutateAsync({
+                    itemId: item.itemId,
+                    name,
+                    quantity,
+                    note,
+                  })
                 }
                 onRemove={() => removeItem.mutate(item.itemId)}
               />
@@ -196,12 +215,15 @@ export function StoreListPage() {
                 ref={addInputRef}
                 value={addName}
                 onChange={(e) => {
-                  setAddName(e.target.value)
-                  setShowSuggestions(true)
+                  setAddName(e.target.value);
+                  setShowSuggestions(true);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAdd()
-                  if (e.key === 'Escape') { setAddName(''); setShowSuggestions(false) }
+                  if (e.key === "Enter") handleAdd();
+                  if (e.key === "Escape") {
+                    setAddName("");
+                    setShowSuggestions(false);
+                  }
                 }}
                 onFocus={() => setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
@@ -253,8 +275,10 @@ export function StoreListPage() {
               >
                 <Plus className="h-3 w-3 text-muted-foreground" />
                 {item.name}
-                {item.quantity && item.quantity !== '1' && (
-                  <span className="text-xs text-muted-foreground">× {item.quantity}</span>
+                {item.quantity && item.quantity !== "1" && (
+                  <span className="text-xs text-muted-foreground">
+                    × {item.quantity}
+                  </span>
                 )}
               </button>
             ))}
@@ -293,28 +317,32 @@ export function StoreListPage() {
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-foreground">{item.name}</p>
-                      {item.quantity && item.quantity !== '1' && (
-                        <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                      {item.quantity && item.quantity !== "1" && (
+                        <p className="text-xs text-muted-foreground">
+                          Qty: {item.quantity}
+                        </p>
                       )}
                       {item.completedAt && (
                         <p className="text-xs text-muted-foreground">
-                          {format(item.completedAt.toDate(), 'MMM d, h:mm a')}
+                          {format(item.completedAt.toDate(), "MMM d, h:mm a")}
                         </p>
                       )}
                     </div>
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger render={
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-                            aria-label={`Undo completion of ${item.name}`}
-                            onClick={() => uncompleteItem.mutate(item.itemId)}
-                          >
-                            <Undo2 className="h-3.5 w-3.5" />
-                          </Button>
-                        } />
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                              aria-label={`Undo completion of ${item.name}`}
+                              onClick={() => uncompleteItem.mutate(item.itemId)}
+                            >
+                              <Undo2 className="h-3.5 w-3.5" />
+                            </Button>
+                          }
+                        />
                         <TooltipContent>Move back to list</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -347,8 +375,5 @@ export function StoreListPage() {
         />
       )}
     </div>
-  )
+  );
 }
-
-
-

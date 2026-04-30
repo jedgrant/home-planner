@@ -6,7 +6,7 @@ import {
 } from "@/shared/components/ui/sheet";
 import { ChoreGroupSection } from "@/features/chores/components/ChoreGroupSection";
 import type { UserProfile } from "@/shared/types";
-import type { WeeklyChoreDoc } from "@/shared/types/chores";
+import type { ChoreItem, WeeklyChoreDoc } from "@/shared/types/chores";
 
 interface ChoreSheetContext {
   familyId: string;
@@ -16,6 +16,7 @@ interface ChoreSheetContext {
   choreNameMap: Record<string, { name: string; description: string }>;
   memberNames: Record<string, string>;
   memberPhotos: Record<string, string | null>;
+  groupChoresMap: Record<string, ChoreItem[]>;
 }
 
 interface ChildChoreCardProps {
@@ -32,22 +33,25 @@ export function ChildChoreCard({
   sheetContext,
 }: ChildChoreCardProps) {
   const [open, setOpen] = useState(false);
-  const assignments = weekDoc ? Object.values(weekDoc.assignments) : [];
-  const myAssignments = assignments.filter(
-    (a) => a.assigneeId === member.userId,
-  );
-
-  const allChores = myAssignments.flatMap((a) => Object.values(a.chores));
-  const totalCount = allChores.length;
-  const doneCount = allChores.filter((c) => c.status === "complete").length;
-  const allDone = totalCount > 0 && doneCount === totalCount;
-  const showOverdue = isOverdue && totalCount > 0 && !allDone;
-
-  const initial = member.displayName.charAt(0).toUpperCase();
 
   const memberAssignments = Object.entries(weekDoc?.assignments ?? {}).filter(
     ([, a]) => a.assigneeId === member.userId,
   );
+
+  // Total uses live group definition; done count uses week doc completion status
+  const totalCount = memberAssignments.reduce((sum, [groupId, a]) => {
+    const liveChores = sheetContext.groupChoresMap[groupId];
+    return sum + (liveChores?.length ?? Object.keys(a.chores).length);
+  }, 0);
+  const doneCount = memberAssignments.reduce(
+    (sum, [, a]) =>
+      sum + Object.values(a.chores).filter((c) => c.status === "complete").length,
+    0,
+  );
+  const allDone = totalCount > 0 && doneCount === totalCount;
+  const showOverdue = isOverdue && totalCount > 0 && !allDone;
+
+  const initial = member.displayName.charAt(0).toUpperCase();
 
   return (
     <>
@@ -110,6 +114,7 @@ export function ChildChoreCard({
                 choreNameMap={sheetContext.choreNameMap}
                 memberNames={sheetContext.memberNames}
                 memberPhotos={sheetContext.memberPhotos}
+                groupChores={sheetContext.groupChoresMap[groupId]}
                 onClose={index === 0 ? () => setOpen(false) : undefined}
               />
             ))}

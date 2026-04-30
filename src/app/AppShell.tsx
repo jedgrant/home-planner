@@ -7,9 +7,9 @@ import {
   ShoppingCart,
   UtensilsCrossed,
   BookOpen,
-  Settings,
   LogOut,
   House,
+  Users,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/shared/lib/firebase";
@@ -17,6 +17,7 @@ import { useAuthStore } from "@/shared/lib/authStore";
 import illustrationChores from "@/assets/illustration-chores.png";
 import illustrationGroceries from "@/assets/illustration-groceries.png";
 import illustrationMeals from "@/assets/illustration-meal-prep.png";
+import illustrationFamilyHug from "@/assets/illustration-family-hug-outdoors.jpg";
 import { BottomNav } from "./BottomNav";
 import { MobileHeader } from "./MobileHeader";
 import { UpdatePrompt } from "./UpdatePrompt";
@@ -32,7 +33,7 @@ const navItems = [
   { to: "/chores", label: "Chores", icon: CheckSquare },
   { to: "/grocery", label: "Grocery list", icon: ShoppingCart },
   { to: "/meals", label: "Meals", icon: UtensilsCrossed, end: true },
-  { to: "/meals/recipes", label: "Recipes", icon: BookOpen },
+  { to: "/recipes", label: "Recipes", icon: BookOpen },
 ];
 
 export function AppShell() {
@@ -46,7 +47,7 @@ export function AppShell() {
   )?.src;
 
   return (
-    <div className="flex h-screen flex-col md:flex-row bg-background">
+    <div className="flex h-dvh flex-col md:flex-row bg-background">
       {/* Mobile top header — sits outside main so it never scrolls */}
       <MobileHeader />
       {/* Sidebar — desktop only */}
@@ -63,7 +64,7 @@ export function AppShell() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 space-y-1 p-3">
+        <nav className="flex-none space-y-1 p-3">
           {navItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
@@ -83,6 +84,20 @@ export function AppShell() {
           ))}
         </nav>
 
+        {/* Illustration — fills space between nav and footer */}
+        <div
+          className="flex-1 min-h-0 opacity-50"
+          aria-hidden="true"
+          style={{
+            backgroundImage: `url(${illustrationFamilyHug})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center calc(50%)",
+            backgroundRepeat: "no-repeat",
+            maskImage: "linear-gradient(to top, black 55%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to top, black 55%, transparent 100%)",
+          }}
+        />
+
         {/* Footer */}
         <div className="border-t border-sidebar-border p-3 space-y-1">
           <NavLink
@@ -95,8 +110,8 @@ export function AppShell() {
               }`
             }
           >
-            <Settings className="h-4 w-4 shrink-0" />
-            Settings
+            <Users className="h-4 w-4 shrink-0" />
+            Family
           </NavLink>
 
           <button
@@ -130,13 +145,13 @@ export function AppShell() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto relative flex flex-col pb-nav-safe md:pb-0 bg-background">
+      <main className="flex-1 min-h-0 overflow-auto [scrollbar-gutter:stable] relative flex flex-col pt-header-safe md:pt-0 pb-nav-safe md:pb-0 bg-background">
         {illustration && (
           <motion.img
             key={illustration}
             src={illustration}
             aria-hidden="true"
-            className="pointer-events-none fixed bottom-16 left-1/2 -translate-x-1/2 md:bottom-0 md:left-auto md:translate-x-0 md:right-0 w-[90vw] md:w-125 md:max-w-[40vw] select-none z-0 opacity-40"
+            className="pointer-events-none fixed bottom-16 md:hidden left-1/2 -translate-x-1/2 md:bottom-0 md:left-auto md:translate-x-0 md:right-0 w-[90vw] md:w-125 md:max-w-[40vw] select-none z-0 opacity-10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.4 }}
             transition={{ duration: 0.35, ease: "easeOut" }}

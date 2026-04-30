@@ -15,34 +15,25 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { GripVertical, Plus, Trash2 } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { Button } from '@/shared/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui/select'
-import { PrepTaskTiptap } from './PrepTaskTiptap'
-import type { PrepTask, TaskDifficulty } from '@/shared/types/recipes'
+import { Textarea } from '@/shared/components/ui/textarea'
+import type { PrepTask } from '@/shared/types/recipes'
 
 // ── Sortable row ──────────────────────────────────────────────────────────────
 
 interface SortableTaskRowProps {
   task: PrepTask
   onRemove: () => void
-  onChangeDifficulty: (d: TaskDifficulty) => void
-  onDescriptionChange: (html: string) => void
+  onDescriptionChange: (text: string) => void
   disabled: boolean
 }
 
 function SortableTaskRow({
   task,
   onRemove,
-  onChangeDifficulty,
   onDescriptionChange,
   disabled,
 }: SortableTaskRowProps) {
@@ -71,47 +62,34 @@ function SortableTaskRow({
         <button
           {...attributes}
           {...listeners}
-          className="cursor-grab touch-none text-muted-foreground mt-1 shrink-0"
+          className="cursor-grab touch-none text-muted-foreground mt-2 shrink-0"
           aria-label="Drag to reorder"
         >
           <GripVertical className="h-4 w-4" />
         </button>
       )}
 
-      <PrepTaskTiptap
-        content={task.description}
-        editable={!disabled}
-        onDebouncedChange={onDescriptionChange}
+      <Textarea
+        value={task.description}
+        onChange={(e) => onDescriptionChange(e.target.value)}
+        disabled={disabled}
+        rows={1}
+        className="flex-1 resize-none overflow-hidden"
+        placeholder="Describe the step…"
       />
 
-      <div className="flex items-center gap-1 shrink-0 mt-0.5">
-        <Select
-          value={task.difficulty}
-          onValueChange={(v) => onChangeDifficulty(v as TaskDifficulty)}
-          disabled={disabled}
+      {!disabled && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-destructive mt-1 shrink-0"
+          onClick={onRemove}
+          aria-label="Remove task"
         >
-          <SelectTrigger className="h-7 w-24 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="easy">Easy</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="hard">Hard</SelectItem>
-          </SelectContent>
-        </Select>
-        {!disabled && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={onRemove}
-            aria-label="Remove task"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        )}
-      </div>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      )}
     </div>
   )
 }
@@ -133,8 +111,8 @@ export function RecipePrepTaskEditor({
   onSave,
   disabled = false,
 }: RecipePrepTaskEditorProps) {
-  const [newDifficulty, setNewDifficulty] = useState<TaskDifficulty>('easy')
-  const [pendingHtml, setPendingHtml] = useState('')
+  const [newText, setNewText] = useState('')
+  const newInputRef = useRef<HTMLTextAreaElement>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -155,21 +133,16 @@ export function RecipePrepTaskEditor({
   }
 
   function handleAdd() {
-    const trimmed = pendingHtml.trim().replace(/^<p><\/p>$/, '')
+    const trimmed = newText.trim()
     if (!trimmed) return
     const updated = [
       ...tasks,
-      {
-        taskId: nanoid(),
-        description: trimmed,
-        difficulty: newDifficulty,
-        order: tasks.length,
-      },
+      { taskId: nanoid(), description: trimmed, order: tasks.length },
     ]
     onChange(updated)
     onSave(updated)
-    setPendingHtml('')
-    setNewDifficulty('easy')
+    setNewText('')
+    newInputRef.current?.focus()
   }
 
   function handleRemove(taskId: string) {
@@ -180,14 +153,8 @@ export function RecipePrepTaskEditor({
     onSave(updated)
   }
 
-  function handleChangeDifficulty(taskId: string, difficulty: TaskDifficulty) {
-    const updated = tasks.map((t) => (t.taskId === taskId ? { ...t, difficulty } : t))
-    onChange(updated)
-    onSave(updated)
-  }
-
-  function handleDescriptionChange(taskId: string, html: string) {
-    const updated = tasks.map((t) => (t.taskId === taskId ? { ...t, description: html } : t))
+  function handleDescriptionChange(taskId: string, text: string) {
+    const updated = tasks.map((t) => (t.taskId === taskId ? { ...t, description: text } : t))
     onChange(updated)
     onSave(updated)
   }
@@ -210,8 +177,7 @@ export function RecipePrepTaskEditor({
               key={task.taskId}
               task={task}
               onRemove={() => handleRemove(task.taskId)}
-              onChangeDifficulty={(d) => handleChangeDifficulty(task.taskId, d)}
-              onDescriptionChange={(html) => handleDescriptionChange(task.taskId, html)}
+              onDescriptionChange={(text) => handleDescriptionChange(task.taskId, text)}
               disabled={disabled}
             />
           ))}
@@ -220,32 +186,24 @@ export function RecipePrepTaskEditor({
 
       {!disabled && (
         <div className="flex items-start gap-2 pt-1">
-          <div className="flex-1 rounded-lg border border-border bg-background px-3 py-2">
-            <PrepTaskTiptap
-              content={pendingHtml}
-              editable
-              onDebouncedChange={setPendingHtml}
-            />
-          </div>
-          <Select
-            value={newDifficulty}
-            onValueChange={(v) => setNewDifficulty(v as TaskDifficulty)}
-          >
-            <SelectTrigger className="w-24 mt-0.5">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="easy">Easy</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="hard">Hard</SelectItem>
-            </SelectContent>
-          </Select>
+          <Textarea
+            ref={newInputRef}
+            value={newText}
+            onChange={(e) => setNewText(e.target.value)}
+            rows={1}
+            className="flex-1 resize-none overflow-hidden"
+            placeholder="Add a step…"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleAdd()
+              }
+            }}
+          />
           <Button
             type="button"
-            size="sm"
             variant="outline"
             onClick={handleAdd}
-            className="mt-0.5"
           >
             <Plus className="h-4 w-4 mr-1" />
             Add

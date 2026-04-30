@@ -50,26 +50,43 @@ export function dateToWeekId(date: Date): string {
 
 /**
  * Returns the current assignee ID for a rotation group on the given week.
- * Returns empty string if the group is not a rotation group or pool is empty.
+ *
+ * The family's choreRotationPool provides the ordered list of who rotates.
+ * The anchor (rotationAnchorWeekId + rotationAnchorPoolIndex) records who
+ * was assigned at a known week; the rotation advances one slot per duration
+ * from there. Parents can rotate early, which resets the anchor.
+ *
+ * @param group         The chore group
+ * @param weekId        Target week, e.g. "2026-W17"
+ * @param pool          Ordered user IDs from the family's choreRotationPool
+ * @param durationWeeks How many weeks each person holds (from family settings)
  */
-export function getCurrentAssignee(group: ChoreGroup, weekId: string): string {
+export function getCurrentAssignee(
+  group: ChoreGroup,
+  weekId: string,
+  pool: string[],
+  durationWeeks: number,
+): string {
   if (group.assignmentType !== 'rotation') return ''
-  if (group.rotationPool.length === 0) return ''
-  if (!group.rotationStartDate) return group.rotationPool[0]
+  if (pool.length === 0) return ''
 
-  const startWeekId = dateToWeekId(new Date(group.rotationStartDate))
-  const startAbs = weekIdToAbsoluteWeek(startWeekId)
   const currentAbs = weekIdToAbsoluteWeek(weekId)
+  const duration = durationWeeks > 0 ? durationWeeks : 1
 
-  const weeksElapsed = currentAbs - startAbs
-  const duration = group.rotationDurationWeeks > 0 ? group.rotationDurationWeeks : 1
-  const poolSize = group.rotationPool.length
+  if (group.rotationAnchorWeekId != null && group.rotationAnchorPoolIndex != null) {
+    const anchorAbs = weekIdToAbsoluteWeek(group.rotationAnchorWeekId)
+    const weeksFromAnchor = currentAbs - anchorAbs
+    const slot = Math.floor(weeksFromAnchor / duration)
+    const index = ((group.rotationAnchorPoolIndex + slot) % pool.length + pool.length) % pool.length
+    return pool[index]
+  }
 
-  // Each member stays for `duration` weeks; cycle through pool
-  const totalSlots = weeksElapsed / duration
-  const index = ((Math.floor(totalSlots) % poolSize) + poolSize) % poolSize
-
-  return group.rotationPool[index]
+  // Fallback for groups without an anchor (legacy data)
+  const EPOCH = '2020-W01'
+  const epochAbs = weekIdToAbsoluteWeek(EPOCH)
+  const weeksFromEpoch = currentAbs - epochAbs
+  const index = ((weeksFromEpoch % pool.length) + pool.length) % pool.length
+  return pool[index]
 }
 
 /**
@@ -80,9 +97,11 @@ export function getRotationSchedule(
   group: ChoreGroup,
   weeksAhead: number,
   memberNames: Record<string, string>,
+  pool: string[],
+  durationWeeks: number,
   fromWeekId?: string,
 ): RotationEntry[] {
-  if (group.assignmentType !== 'rotation' || group.rotationPool.length === 0) {
+  if (group.assignmentType !== 'rotation' || pool.length === 0) {
     return []
   }
 
@@ -93,7 +112,7 @@ export function getRotationSchedule(
     const weekStart = weekIdToStartDate(startWeekId)
     weekStart.setDate(weekStart.getDate() + i * 7)
     const weekId = dateToWeekId(weekStart)
-    const assigneeId = getCurrentAssignee(group, weekId)
+    const assigneeId = getCurrentAssignee(group, weekId, pool, durationWeeks)
     const assigneeName = memberNames[assigneeId] ?? assigneeId
 
     entries.push({

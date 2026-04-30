@@ -102,6 +102,13 @@ service cloud.firestore {
         allow read: if isFamilyMember(familyId);
         allow write: if false;
       }
+
+      match /pendingProfiles/{profileId} {
+        allow read: if isFamilyMember(familyId);
+        allow create: if isParent() && isFamilyMember(familyId);
+        allow delete: if isFamilyMember(familyId);
+        allow update: if false;
+      }
     }
 
     // ─── Global recipes ──────────────────────────────────────────────────────

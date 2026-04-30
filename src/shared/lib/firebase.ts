@@ -26,5 +26,5 @@ if (import.meta.env.DEV) {
   connectAuthEmulator(auth, 'http://localhost:19099', { disableWarnings: true })
   connectFirestoreEmulator(db, 'localhost', 18080)
   connectStorageEmulator(storage, 'localhost', 19199)
-  connectFunctionsEmulator(functions, 'localhost', 15001)
+  connectFunctionsEmulator(functions, 'localhost', 5001)
 }

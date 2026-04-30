@@ -4,6 +4,7 @@ import {
   updateDoc,
   getDoc,
   getDocs,
+  deleteDoc,
   collection,
   query,
   where,
@@ -12,10 +13,13 @@ import {
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { updateProfile } from 'firebase/auth'
 import { nanoid } from 'nanoid'
-import { db } from '@/shared/lib/firebase'
-import { FAMILIES, USERS, INVITE_CODES } from '@/shared/lib/collections'
-import type { UserRole } from '@/shared/types'
+import { httpsCallable } from 'firebase/functions'
+import { auth, db, storage, functions } from '@/shared/lib/firebase'
+import { FAMILIES, USERS, INVITE_CODES, pendingProfiles as pendingProfilesCol } from '@/shared/lib/collections'
+import type { UserRole, PendingProfile } from '@/shared/types'
 
 const INVITE_TTL_HOURS = 48
 
@@ -223,4 +227,79 @@ export async function getFamilyMembers(familyId: string) {
   return memberDocs
     .filter((d) => d.exists())
     .map((d) => d.data())
+}
+
+export async function addPendingProfile(
+  familyId: string,
+  createdBy: string,
+  params: { displayName: string; role: UserRole; photoBlob?: Blob },
+): Promise<PendingProfile> {
+  const profileId = nanoid()
+  let photoUrl: string | null = null
+
+  if (params.photoBlob) {
+    const fileRef = storageRef(storage, `avatars/pending/${profileId}`)
+    await uploadBytes(fileRef, params.photoBlob)
+    photoUrl = await getDownloadURL(fileRef)
+  }
+
+  const profileData = {
+    id: profileId,
+    familyId,
+    displayName: params.displayName,
+    photoUrl,
+    role: params.role,
+    createdBy,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }
+
+  await setDoc(doc(db, pendingProfilesCol(familyId), profileId), profileData)
+  return { ...profileData, createdAt: Timestamp.now(), updatedAt: Timestamp.now() } as PendingProfile
+}
+
+export async function deletePendingProfile(
+  familyId: string,
+  profileId: string,
+): Promise<void> {
+  await deleteDoc(doc(db, pendingProfilesCol(familyId), profileId))
+}
+
+export async function claimPendingProfile(
+  familyId: string,
+  profileId: string,
+  uid: string,
+  profile: Pick<PendingProfile, 'displayName' | 'photoUrl'>,
+): Promise<void> {
+  const batch = writeBatch(db)
+
+  batch.update(doc(db, USERS, uid), {
+    displayName: profile.displayName,
+    photoUrl: profile.photoUrl,
+    updatedAt: serverTimestamp(),
+  })
+
+  batch.delete(doc(db, pendingProfilesCol(familyId), profileId))
+
+  await batch.commit()
+
+  // Sync Firebase Auth profile — non-critical, ignore failure
+  if (auth.currentUser) {
+    try {
+      await updateProfile(auth.currentUser, {
+        displayName: profile.displayName,
+        photoURL: profile.photoUrl ?? undefined,
+      })
+    } catch {
+      // Auth profile update is cosmetic; Firestore is the source of truth
+    }
+  }
+}
+
+export async function deleteFamily(familyId: string): Promise<void> {
+  const fn = httpsCallable<{ familyId: string }, { success: boolean }>(
+    functions,
+    'deleteFamily',
+  )
+  await fn({ familyId })
 }

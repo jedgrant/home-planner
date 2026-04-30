@@ -88,9 +88,9 @@ export function DinnerCard({ day, meal, isLoading, isParent, onPlanDinner }: Din
         <CardContent className="px-4 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="font-medium text-sm leading-snug truncate">{meal.name}</p>
-            {meal.recipes.length > 0 && (
+            {(meal.items ?? []).length > 0 && (
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                {meal.recipes.map((r) => r.recipeName).join(' · ')}
+                {(meal.items ?? []).map((i) => i.name).join(' · ')}
               </p>
             )}
           </div>

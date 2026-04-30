@@ -22,10 +22,10 @@ export interface ChoreGroup {
   assignmentType: AssignmentType
   /** User IDs for fixed assignment */
   fixedAssignees: string[]
-  /** User IDs eligible for rotation */
-  rotationPool: string[]
-  rotationDurationWeeks: number
-  rotationStartDate: string | null
+  /** Set when a parent manually overrides a rotation week — future weeks rotate from here */
+  rotationAnchorWeekId?: string | null
+  /** Index within the family's choreRotationPool of the person assigned at the anchor week */
+  rotationAnchorPoolIndex?: number | null
   chores: ChoreItem[]
   archived: boolean
   createdAt: Timestamp

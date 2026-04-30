@@ -18,8 +18,21 @@ export interface Ingredient {
 export interface PrepTask {
   taskId: string
   description: string
-  difficulty: TaskDifficulty
+  difficulty?: TaskDifficulty
   order: number
+}
+
+/**
+ * A named component of a recipe (e.g. "Chicken", "Peppers & Onions", "Tortillas").
+ * Each component has its own ingredients and optional prep tasks.
+ */
+export interface RecipeComponent {
+  componentId: string
+  name: string
+  /** Optional preparation notes or instructions */
+  notes?: string
+  ingredients: Ingredient[]
+  tasks: PrepTask[]
 }
 
 export interface Recipe {
@@ -33,8 +46,7 @@ export interface Recipe {
   visibility: RecipeVisibility
   /** set when recipe was copied from a global recipe */
   sourceGlobalRecipeId: string | null
-  ingredients: Ingredient[]
-  prepTasks: PrepTask[]
+  components: RecipeComponent[]
   archived: boolean
   createdBy: string
   createdAt: Timestamp

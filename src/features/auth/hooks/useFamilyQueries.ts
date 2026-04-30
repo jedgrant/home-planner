@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query'
-import { doc, getDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { doc, getDoc, getDocs, updateDoc, collection, query, where, Timestamp, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/shared/lib/firebase'
-import { FAMILIES, USERS, INVITE_CODES } from '@/shared/lib/collections'
-import type { UserProfile, Family, InviteCode } from '@/shared/types'
+import { FAMILIES, USERS, INVITE_CODES, pendingProfiles as pendingProfilesCol } from '@/shared/lib/collections'
+import type { UserProfile, Family, InviteCode, PendingProfile } from '@/shared/types'
 
 export function useFamily(familyId: string | null) {
   return useQuery<Family | null>({
@@ -63,6 +63,41 @@ export function useActiveCodes(familyId: string | null) {
       return snap.docs
         .map((d) => d.data() as InviteCode)
         .filter((d) => d.reusable === true || (d.expiresAt != null && d.expiresAt.toMillis() > now.toMillis()))
+    },
+  })
+}
+
+export function usePendingProfiles(familyId: string | null) {
+  return useQuery<PendingProfile[]>({
+    queryKey: ['pendingProfiles', familyId],
+    enabled: !!familyId,
+    queryFn: async () => {
+      const snap = await getDocs(collection(db, pendingProfilesCol(familyId!)))
+      return snap.docs.map((d) => ({ ...d.data(), id: d.id }) as PendingProfile)
+    },
+  })
+}
+
+export function useUpdateFamilyRotationSettings() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      familyId,
+      rotationPool,
+      rotationDurationWeeks,
+    }: {
+      familyId: string
+      rotationPool: string[]
+      rotationDurationWeeks: number
+    }) => {
+      await updateDoc(doc(db, FAMILIES, familyId), {
+        choreRotationPool: rotationPool,
+        choreRotationDurationWeeks: rotationDurationWeeks,
+        updatedAt: serverTimestamp(),
+      })
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['family', variables.familyId] })
     },
   })
 }

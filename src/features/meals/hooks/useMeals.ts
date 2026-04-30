@@ -19,7 +19,16 @@ import {
   aggregateMealHistory,
   aggregateTaskHistory,
 } from '@/shared/lib/collections'
-import type { Meal, MealRecipe, MealSuggestion, SuggestionVote, MealHistoryAggregate, MealHistorySummary, TaskHistoryAggregate } from '@/shared/types/meals'
+import type {
+  Meal,
+  MealItem,
+  MealComponent,
+  MealSuggestion,
+  SuggestionVote,
+  MealHistoryAggregate,
+  MealHistorySummary,
+  TaskHistoryAggregate,
+} from '@/shared/types/meals'
 import type { Recipe } from '@/shared/types/recipes'
 
 // ── Reads ─────────────────────────────────────────────────────────────────────
@@ -75,7 +84,7 @@ export function useCreateMeal(familyId: string) {
         date: payload.date,
         status: 'planned' as const,
         servedAt: null,
-        recipes: [],
+        items: [],
         createdBy: payload.createdBy,
         createdAt: now,
         updatedAt: now,
@@ -99,7 +108,7 @@ export function useUpdateMeal(familyId: string) {
       updates,
     }: {
       mealId: string
-      updates: Partial<Pick<Meal, 'name' | 'date' | 'status' | 'recipes' | 'cleanupTasks' | 'freeFormItems' | 'suggestions'>>
+      updates: Partial<Pick<Meal, 'name' | 'date' | 'status' | 'items' | 'cleanupTasks' | 'suggestions'>>
     }) => {
       await updateDoc(doc(db, mealsPath(familyId), mealId), {
         ...updates,
@@ -134,31 +143,39 @@ export function useCompleteTask(familyId: string) {
   return useMutation({
     mutationFn: async ({
       meal,
-      recipeIndex,
-      taskIndex,
+      itemId,
+      componentId,
+      taskId,
       completedBy,
     }: {
       meal: Meal
-      recipeIndex: number
-      taskIndex: number
+      itemId: string
+      componentId: string
+      taskId: string
       completedBy: string
     }) => {
-      const updatedRecipes: MealRecipe[] = meal.recipes.map((recipe, ri) => {
-        if (ri !== recipeIndex) return recipe
+      const updatedItems: MealItem[] = meal.items.map((item) => {
+        if (item.itemId !== itemId) return item
         return {
-          ...recipe,
-          tasks: recipe.tasks.map((task, ti) => {
-            if (ti !== taskIndex) return task
+          ...item,
+          components: item.components.map((comp) => {
+            if (comp.componentId !== componentId) return comp
             return {
-              ...task,
-              completedBy,
-              completedAt: serverTimestamp() as unknown as import('firebase/firestore').Timestamp,
+              ...comp,
+              tasks: comp.tasks.map((task) => {
+                if (task.taskId !== taskId) return task
+                return {
+                  ...task,
+                  completedBy,
+                  completedAt: serverTimestamp() as unknown as import('firebase/firestore').Timestamp,
+                }
+              }),
             }
           }),
         }
       })
       await updateDoc(doc(db, mealsPath(familyId), meal.mealId), {
-        recipes: updatedRecipes,
+        items: updatedItems,
         updatedAt: serverTimestamp(),
       })
     },
@@ -190,11 +207,11 @@ export function useMarkServed(familyId: string) {
       const existing = histSnap.exists()
         ? (histSnap.data() as MealHistoryAggregate).recentMeals
         : []
-      const newEntry = {
+      const newEntry: MealHistorySummary = {
         mealId: meal.mealId,
         date: meal.date,
-        recipeIds: meal.recipes.map((r) => r.recipeId),
-        recipeNames: meal.recipes.map((r) => r.recipeName),
+        itemNames: meal.items.map((i) => i.name),
+        recipeIds: meal.items.flatMap((i) => (i.recipeId ? [i.recipeId] : [])),
       }
       const recentMeals = [newEntry, ...existing].slice(0, 30)
       await setDoc(histRef, { recentMeals, updatedAt: now }, { merge: true })
@@ -205,18 +222,20 @@ export function useMarkServed(familyId: string) {
       const existingTasks = taskHistSnap.exists()
         ? (taskHistSnap.data() as TaskHistoryAggregate).recentCompletions
         : []
-      const completedTasks = meal.recipes.flatMap((r) =>
-        r.tasks
-          .filter((t) => t.completedAt !== null && t.assigneeId !== null)
-          .map((t) => ({
-            userId: t.assigneeId!,
-            userName: t.assigneeName ?? '',
-            taskDescription: t.description,
-            difficulty: t.difficulty,
-            mealId: meal.mealId,
-            mealDate: meal.date,
-            completedAt: t.completedAt!,
-          }))
+      const completedTasks = meal.items.flatMap((item) =>
+        item.components.flatMap((comp) =>
+          comp.tasks
+            .filter((t) => t.completedAt !== null && t.assigneeId !== null)
+            .map((t) => ({
+              userId: t.assigneeId!,
+              userName: t.assigneeName ?? '',
+              taskDescription: t.description,
+              difficulty: t.difficulty,
+              mealId: meal.mealId,
+              mealDate: meal.date,
+              completedAt: t.completedAt!,
+            }))
+        )
       )
       const recentCompletions = [...completedTasks, ...existingTasks].slice(0, 50)
       await setDoc(taskHistRef, { recentCompletions, updatedAt: now }, { merge: true })
@@ -235,30 +254,42 @@ export function useAssignMealTask(familyId: string) {
   return useMutation({
     mutationFn: async ({
       meal,
-      recipeIndex,
-      taskIndex,
+      itemId,
+      componentId,
+      taskId,
       assigneeId,
       assigneeName,
     }: {
       meal: Meal
-      recipeIndex: number
-      taskIndex: number
+      itemId: string
+      componentId: string
+      taskId: string
       /** Pass null to unassign */
       assigneeId: string | null
       assigneeName: string | null
     }) => {
-      const updatedRecipes: MealRecipe[] = meal.recipes.map((recipe, ri) => {
-        if (ri !== recipeIndex) return recipe
+      const updatedItems: MealItem[] = meal.items.map((item) => {
+        if (item.itemId !== itemId) return item
         return {
-          ...recipe,
-          tasks: recipe.tasks.map((task, ti) => {
-            if (ti !== taskIndex) return task
-            return { ...task, assigneeId, assigneeName }
+          ...item,
+          components: item.components.map((comp) => {
+            if (comp.componentId !== componentId) return comp
+            // Component-level assignment (no tasks)
+            if (taskId === '__component__') {
+              return { ...comp, assigneeId, assigneeName }
+            }
+            return {
+              ...comp,
+              tasks: comp.tasks.map((task) => {
+                if (task.taskId !== taskId) return task
+                return { ...task, assigneeId, assigneeName }
+              }),
+            }
           }),
         }
       })
       await updateDoc(doc(db, mealsPath(familyId), meal.mealId), {
-        recipes: updatedRecipes,
+        items: updatedItems,
         updatedAt: serverTimestamp(),
       })
     },
@@ -414,38 +445,49 @@ export function useAcceptMealSuggestion(familyId: string) {
       suggestion: MealSuggestion
       allRecipes: Recipe[]
     }) => {
-      let updatedRecipes = meal.recipes
-      let updatedFreeFormItems = meal.freeFormItems ?? []
+      let newItem: MealItem
 
       if (suggestion.recipeId) {
         const recipe = allRecipes.find((r) => r.recipeId === suggestion.recipeId)
         if (recipe) {
-          const newRecipe: MealRecipe = {
-            recipeId: recipe.recipeId,
-            recipeName: recipe.name,
+          newItem = {
+            itemId: nanoid(),
             courseType: recipe.courseType,
-            tasks: recipe.prepTasks.map((pt) => ({
-              taskId: pt.taskId,
-              description: pt.description,
-              difficulty: pt.difficulty,
-              assigneeId: null,
-              assigneeName: null,
-              completedAt: null,
+            name: recipe.name,
+            recipeId: recipe.recipeId,
+            components: recipe.components.map((comp): MealComponent => ({
+              componentId: comp.componentId,
+              name: comp.name,
+              notes: comp.notes,
+              ingredients: comp.ingredients,
+              tasks: comp.tasks.map((pt) => ({
+                taskId: pt.taskId,
+                description: pt.description,
+                difficulty: pt.difficulty,
+                assigneeId: null,
+                assigneeName: null,
+                completedAt: null,
+              })),
             })),
           }
-          updatedRecipes = [...meal.recipes, newRecipe]
+        } else {
+          // Recipe not found — fall back to free-form item
+          newItem = {
+            itemId: nanoid(),
+            courseType: (suggestion.courseType as MealItem['courseType']) ?? 'entree',
+            name: suggestion.name,
+            recipeId: null,
+            components: [],
+          }
         }
       } else {
-        updatedFreeFormItems = [
-          ...updatedFreeFormItems,
-          {
-            itemId: nanoid(),
-            courseType: 'entree' as const,
-            description: suggestion.name,
-            assigneeId: null,
-            assigneeName: null,
-          },
-        ]
+        newItem = {
+          itemId: nanoid(),
+          courseType: (suggestion.courseType as MealItem['courseType']) ?? 'entree',
+          name: suggestion.name,
+          recipeId: null,
+          components: [],
+        }
       }
 
       const updatedSuggestions = (meal.suggestions ?? []).map((s) =>
@@ -453,8 +495,7 @@ export function useAcceptMealSuggestion(familyId: string) {
       )
 
       await updateDoc(doc(db, mealsPath(familyId), meal.mealId), {
-        recipes: updatedRecipes,
-        freeFormItems: updatedFreeFormItems,
+        items: [...meal.items, newItem],
         suggestions: updatedSuggestions,
         updatedAt: serverTimestamp(),
       })

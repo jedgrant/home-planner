@@ -7,6 +7,7 @@ import { LoginPage } from '@/features/auth/components/LoginPage'
 import { RegisterPage } from '@/features/auth/components/RegisterPage'
 import { ResetPasswordPage } from '@/features/auth/components/ResetPasswordPage'
 import { OnboardingPage } from '@/features/auth/components/OnboardingPage'
+import { ClaimProfilePage } from '@/features/auth/components/ClaimProfilePage'
 import { ChoresPage } from '@/features/chores/components/ChoresPage'
 import { ChoreManagePage } from '@/features/chores/components/ChoreManagePage'
 import { GroceryPage } from '@/features/grocery/components/GroceryPage'
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
     element: <AuthGuard />,
     children: [
       { path: '/onboarding', element: <OnboardingPage /> },
+      { path: '/claim-profile', element: <ClaimProfilePage /> },
     ],
   },
   // Auth + family required — full app shell
@@ -100,16 +102,24 @@ export const router = createBrowserRouter([
               },
               {
                 path: '/meals/recipes',
+                element: <Navigate to="/recipes" replace />,
+              },
+              {
+                path: '/meals/recipes/:id',
+                element: <Navigate to="/recipes" replace />,
+              },
+              {
+                path: '/recipes',
                 element: (
-                  <SectionErrorBoundary resetKey="/meals/recipes">
+                  <SectionErrorBoundary resetKey="/recipes">
                     <RecipeBookPage />
                   </SectionErrorBoundary>
                 ),
               },
               {
-                path: '/meals/recipes/:id',
+                path: '/recipes/:id',
                 element: (
-                  <SectionErrorBoundary resetKey="/meals/recipes/:id">
+                  <SectionErrorBoundary resetKey="/recipes/:id">
                     <RecipeDetailPage />
                   </SectionErrorBoundary>
                 ),

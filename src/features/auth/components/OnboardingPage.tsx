@@ -17,7 +17,9 @@ import { Button } from '@/shared/components/ui/button'
 import { useAuthStore } from '@/shared/lib/authStore'
 import { createFamily, joinFamilyWithCode } from '../familyFunctions'
 import { signOut } from 'firebase/auth'
-import { auth } from '@/shared/lib/firebase'
+import { collection, getCountFromServer } from 'firebase/firestore'
+import { auth, db } from '@/shared/lib/firebase'
+import { pendingProfiles as pendingProfilesCol } from '@/shared/lib/collections'
 import { AuthLayout } from './AuthLayout'
 
 type Tab = 'create' | 'join'
@@ -60,7 +62,8 @@ export function OnboardingPage() {
       const familyId = await createFamily(user.uid, values.familyName)
       setUser({ ...user, familyId, role: 'parent' })
       navigate('/chores')
-    } catch {
+    } catch (err) {
+      console.error('Failed to create family:', err)
       setServerError('Failed to create family. Please try again.')
     }
   }
@@ -73,7 +76,14 @@ export function OnboardingPage() {
       const { familyId, role, familyName } = await joinFamilyWithCode(user.uid, values.code)
       setUser({ ...user, familyId, role })
       toast.success(`You've joined ${familyName}!`)
-      navigate('/dashboard')
+      const countSnap = await getCountFromServer(
+        collection(db, pendingProfilesCol(familyId)),
+      )
+      if (countSnap.data().count > 0) {
+        navigate('/claim-profile')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (err) {
       setJoining(false)
       setServerError(err instanceof Error ? err.message : 'Failed to join family.')

@@ -1,26 +1,45 @@
 import type { Timestamp } from 'firebase/firestore'
-import type { CourseType, TaskDifficulty } from './recipes'
+import type { CourseType, Ingredient, TaskDifficulty } from './recipes'
 
 export type MealStatus = 'incomplete' | 'planned' | 'in_progress' | 'served'
-
-export type FreeFormCourseType = 'entree' | 'side' | 'topping' | 'dessert'
-
-export interface FreeFormItem {
-  itemId: string
-  courseType: FreeFormCourseType
-  /** HTML string from Tiptap */
-  description: string
-  assigneeId: string | null
-  assigneeName: string | null
-}
 
 export interface MealTask {
   taskId: string
   description: string
-  difficulty: TaskDifficulty
+  difficulty?: TaskDifficulty
   assigneeId: string | null
   assigneeName: string | null
   completedAt: Timestamp | null
+}
+
+/**
+ * A named component within a MealItem at execution time (e.g. "Chicken", "Pico").
+ * Mirrors RecipeComponent but tasks carry assignee fields.
+ */
+export interface MealComponent {
+  componentId: string
+  name: string
+  notes?: string
+  /** Assignee for the whole component — only used when tasks is empty */
+  assigneeId?: string | null
+  assigneeName?: string | null
+  ingredients: Ingredient[]
+  tasks: MealTask[]
+}
+
+/**
+ * A single dish/item within a planned meal.
+ * May be linked to a saved recipe (recipeId set) or free-form (recipeId null).
+ */
+export interface MealItem {
+  itemId: string
+  courseType: CourseType
+  name: string
+  /** Linked recipe ID, or null if free-form */
+  recipeId: string | null
+  /** Optional top-level notes for the item */
+  notes?: string
+  components: MealComponent[]
 }
 
 export interface SuggestionVote {
@@ -42,13 +61,6 @@ export interface MealSuggestion {
   accepted: boolean
 }
 
-export interface MealRecipe {
-  recipeId: string
-  recipeName: string
-  courseType: CourseType
-  tasks: MealTask[]
-}
-
 export interface Meal {
   mealId: string
   familyId: string
@@ -57,11 +69,9 @@ export interface Meal {
   date: string
   status: MealStatus
   servedAt: Timestamp | null
-  recipes: MealRecipe[]
+  items: MealItem[]
   /** Fixed cleanup tasks (Dishes, Put away food, Wipe down counters). Stored when first assigned. */
   cleanupTasks?: MealTask[]
-  /** Free-form items (not from recipe book) added to the meal. */
-  freeFormItems?: FreeFormItem[]
   /** Crowd-sourced entrée suggestions from family members. */
   suggestions?: MealSuggestion[]
   createdBy: string
@@ -74,8 +84,10 @@ export interface Meal {
 export interface MealHistorySummary {
   mealId: string
   date: string
+  /** Names of all MealItems served in this meal */
+  itemNames: string[]
+  /** recipeIds of linked items (may be empty for free-form items) */
   recipeIds: string[]
-  recipeNames: string[]
 }
 
 export interface MealHistoryAggregate {

@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { format, addDays, startOfDay } from "date-fns";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, UtensilsCrossed } from "lucide-react";
 import { useAuthStore } from "@/shared/lib/authStore";
-import { useFamilyMembers } from "@/features/auth/hooks/useFamilyQueries";
+import {
+  useFamilyMembers,
+  usePendingProfiles,
+} from "@/features/auth/hooks/useFamilyQueries";
 import { useMeals } from "@/features/meals/hooks/useMeals";
 import { useStores } from "@/features/grocery/hooks/useStores";
 import { useWeeklyChoreDoc } from "@/features/chores/hooks/useWeeklyChores";
@@ -15,9 +18,10 @@ import {
 import {
   GroceryStoreList,
   ChildChoreCard,
-  ParentTodayMealCard,
+  MealCard,
 } from "@/features/dashboard";
 import type { Meal } from "@/shared/types/meals";
+import type { ChoreItem } from "@/shared/types/chores";
 import { EmptyState } from "@/shared/components/EmptyState";
 import choresIllustration from "@/assets/illustration-chores.png";
 import groceryIllustration from "@/assets/illustration-groceries.png";
@@ -58,21 +62,26 @@ export function DashboardPage() {
 
   // Chores — current week
   const { data: members } = useFamilyMembers(familyId);
+  const { data: pendingProfiles } = usePendingProfiles(familyId);
   const { data: groups } = useChoreGroups(familyId);
 
-  const memberNames = useMemo(
-    () =>
-      Object.fromEntries((members ?? []).map((m) => [m.userId, m.displayName])),
-    [members],
-  );
+  const memberNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const m of members ?? []) map[m.userId] = m.displayName;
+    for (const p of (pendingProfiles ?? []).filter((p) => p.role === "child")) {
+      map[p.id] = p.displayName;
+    }
+    return map;
+  }, [members, pendingProfiles]);
 
-  const memberPhotos = useMemo(
-    () =>
-      Object.fromEntries(
-        (members ?? []).map((m) => [m.userId, m.photoUrl ?? null]),
-      ),
-    [members],
-  );
+  const memberPhotos = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    for (const m of members ?? []) map[m.userId] = m.photoUrl ?? null;
+    for (const p of (pendingProfiles ?? []).filter((p) => p.role === "child")) {
+      map[p.id] = p.photoUrl ?? null;
+    }
+    return map;
+  }, [members, pendingProfiles]);
 
   const choreNameMap = useMemo(() => {
     const map: Record<string, { name: string; description: string }> = {};
@@ -83,6 +92,14 @@ export function DashboardPage() {
           description: chore.description,
         };
       }
+    }
+    return map;
+  }, [groups]);
+
+  const groupChoresMap = useMemo(() => {
+    const map: Record<string, ChoreItem[]> = {};
+    for (const group of groups ?? []) {
+      map[group.groupId] = group.chores;
     }
     return map;
   }, [groups]);
@@ -100,6 +117,69 @@ export function DashboardPage() {
   const isOverdue = new Date().getDay() === 0; // Sunday = still current week but past due
 
   const children = (members ?? []).filter((m) => m.role === "child");
+  const pendingChildren = (pendingProfiles ?? []).filter(
+    (p) => p.role === "child",
+  );
+
+  // Merge claimed + pending children so ChildChoreCard renders for both
+  const allChildren = [
+    ...children,
+    ...pendingChildren.map((p) => ({
+      userId: p.id,
+      displayName: p.displayName,
+      email: "" as string,
+      photoUrl: p.photoUrl,
+      familyId: p.familyId,
+      role: p.role,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+    })),
+  ];
+
+  const noChildren =
+    members !== undefined &&
+    pendingProfiles !== undefined &&
+    children.length === 0 &&
+    pendingChildren.length === 0;
+  const noGroups = groups !== undefined && groups.length === 0;
+  // A group is unassigned only if it's fixed-type with no assignees.
+  // Rotation groups are always considered assigned (they auto-assign via the pool).
+  const noAssignments =
+    !noChildren &&
+    !noGroups &&
+    groups !== undefined &&
+    groups.every(
+      (g) => g.assignmentType === "fixed" && g.fixedAssignees.length === 0,
+    );
+
+  const choreEmptyState = noChildren ? (
+    <EmptyState
+      image={choresIllustration}
+      imageAlt="Chores illustration"
+      aspectRatio="4/3"
+      message="No children added yet"
+      buttonLabel="Family settings"
+      buttonRoute="/settings"
+    />
+  ) : noGroups ? (
+    <EmptyState
+      image={choresIllustration}
+      imageAlt="Chores illustration"
+      aspectRatio="4/3"
+      message="No chore groups yet"
+      buttonLabel="Set up chores"
+      buttonRoute="/chores/manage"
+    />
+  ) : noAssignments ? (
+    <EmptyState
+      image={choresIllustration}
+      imageAlt="Chores illustration"
+      aspectRatio="4/3"
+      message="No chore assignments yet"
+      buttonLabel="Assign chores"
+      buttonRoute="/chores/manage"
+    />
+  ) : null;
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
@@ -117,8 +197,14 @@ export function DashboardPage() {
         <div className="flex-1 min-w-0 space-y-8">
           {/* Meals */}
           <section>
+            <div className="flex items-center gap-2 min-w-0 flex-1 mb-2">
+              <UtensilsCrossed className="h-5 w-5 text-primary shrink-0" />
+              <h2 className="text-xl font-semibold truncate">
+                Dinner
+              </h2>
+            </div>
             <div className="space-y-3">
-              <ParentTodayMealCard
+              <MealCard
                 familyId={familyId}
                 userId={user?.uid ?? ""}
                 userName={user?.displayName ?? ""}
@@ -159,7 +245,7 @@ export function DashboardPage() {
                 imageAlt="Grocery illustration"
                 aspectRatio="4/3"
                 message="No stores set up yet"
-                buttonLabel="Set up grocery"
+                buttonLabel="Set up grocery list"
                 buttonRoute="/grocery"
               />
             )}
@@ -187,18 +273,9 @@ export function DashboardPage() {
               )}
             </p>
           </div>
-          {groups !== undefined && children.length === 0 ? (
-            <EmptyState
-              image={choresIllustration}
-              imageAlt="Chores illustration"
-              aspectRatio="4/3"
-              message="No children in the family yet"
-              buttonLabel="Manage chores"
-              buttonRoute="/chores"
-            />
-          ) : (
+          {choreEmptyState ?? (
             <div className="space-y-3">
-              {children.map((child) => (
+              {allChildren.map((child) => (
                 <ChildChoreCard
                   key={child.userId}
                   member={child}
@@ -212,6 +289,7 @@ export function DashboardPage() {
                     choreNameMap,
                     memberNames,
                     memberPhotos,
+                    groupChoresMap,
                   }}
                 />
               ))}

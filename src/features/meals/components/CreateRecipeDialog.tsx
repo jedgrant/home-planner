@@ -97,7 +97,6 @@ export function CreateRecipeDialog({
       aiSuggest.data?.prepTasks.map((t, i) => ({
         taskId: nanoid(),
         description: t.description,
-        difficulty: t.difficulty,
         order: t.order ?? i,
       })) ?? []
 
@@ -109,8 +108,9 @@ export function CreateRecipeDialog({
       servingSize: values.servingSize ?? 0,
       visibility: 'private',
       sourceGlobalRecipeId: null,
-      ingredients: ingredientsFromAI,
-      prepTasks: tasksFromAI,
+      components: (ingredientsFromAI.length > 0 || tasksFromAI.length > 0)
+        ? [{ componentId: nanoid(), name: values.name, ingredients: ingredientsFromAI, tasks: tasksFromAI }]
+        : [],
       archived: false,
       createdBy: user?.uid ?? '',
     })

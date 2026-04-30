@@ -216,7 +216,7 @@ export function StoreCard({
               if (e.key === "Enter") handleAdd();
             }}
             placeholder="Add item…"
-            className="h-8 text-sm"
+            size="sm"
           />
           <Button
             size="sm"

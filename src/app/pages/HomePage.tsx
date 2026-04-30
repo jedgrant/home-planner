@@ -8,7 +8,7 @@ const tiles = [
   { label: 'Chores', to: '/chores', img: choresPng },
   { label: 'Grocery', to: '/grocery', img: groceriesPng },
   { label: 'Meals', to: '/meals', img: mealsPng },
-  { label: 'Recipes', to: '/meals/recipes', img: recipesPng },
+  { label: 'Recipes', to: '/recipes', img: recipesPng },
 ]
 
 export function HomePage() {

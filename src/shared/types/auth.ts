@@ -17,6 +17,19 @@ export interface Family {
   familyId: string
   name: string
   memberIds: string[]
+  choreRotationPool?: string[]         // Ordered list of user IDs in the rotation
+  choreRotationDurationWeeks?: number  // Weeks each person holds before rotating
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+export interface PendingProfile {
+  id: string
+  familyId: string
+  displayName: string
+  photoUrl: string | null
+  role: UserRole
+  createdBy: string
   createdAt: Timestamp
   updatedAt: Timestamp
 }

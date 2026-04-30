@@ -17,7 +17,7 @@
       "port": 18080
     },
     "functions": {
-      "port": 15001
+      "port": 5001
     },
     "storage": {
       "port": 19199

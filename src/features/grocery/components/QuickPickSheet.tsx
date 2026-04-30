@@ -107,12 +107,13 @@ export function QuickPickSheet({
           </SheetHeader>
 
           <div className="flex items-center gap-2 mt-3 shrink-0">
+            <div className="flex-1">
             <Input
               placeholder="Search items…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1"
             />
+            </div>
             {isParent && (
               <Button
                 variant="outline"

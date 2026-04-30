@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, RotateCcw, Trash2, Check } from "lucide-react";
+import { Pencil, Trash2, Check, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
@@ -15,7 +15,6 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import type { ChoreGroup } from "@/shared/types/chores";
-import type { RotationEntry } from "../utils/rotation";
 import { InlineChoreRow } from "./InlineChoreRow";
 import {
   useAddChore,
@@ -27,20 +26,19 @@ interface ChoreGroupCardProps {
   group: ChoreGroup;
   familyId: string;
   memberNames: Record<string, string>;
-  rotationSchedule: RotationEntry[];
   onEdit: () => void;
   onArchive: () => void;
+  onRotateNow?: () => void;
 }
 
 export function ChoreGroupCard({
   group,
   familyId,
   memberNames,
-  rotationSchedule,
   onEdit,
   onArchive,
+  onRotateNow,
 }: ChoreGroupCardProps) {
-  const [showSchedule, setShowSchedule] = useState(false);
   const [deletingChoreId, setDeletingChoreId] = useState<string | null>(null);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [newChoreName, setNewChoreName] = useState("");
@@ -81,14 +79,9 @@ export function ChoreGroupCard({
   const updateChore = useUpdateChore();
   const deleteChore = useDeleteChore();
 
-  const currentAssignee =
-    group.assignmentType === "fixed"
-      ? group.fixedAssignees.map((id) => memberNames[id] ?? id).join(", ")
-      : (memberNames[rotationSchedule[0]?.assigneeId ?? ""] ?? "—");
-
   return (
     <>
-      <Card className="gap-2">
+      <Card className="gap-2 pb-0">
         <CardHeader className="pb-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -96,47 +89,27 @@ export function ChoreGroupCard({
                 <span className="text-lg font-semibold text-foreground flex-1">
                   {group.name}
                 </span>
-                
-                {/* Rotation schedule preview */}
-                {group.assignmentType === "rotation" &&
-                  rotationSchedule.length > 0 && (
-                    <>
-                      <button
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        onClick={() => setShowSchedule((v) => !v)}
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                        Rotation schedule
-                      </button>
-                      {showSchedule && (
-                        <div className="pl-5 space-y-1">
-                          {rotationSchedule.slice(0, 8).map((entry) => (
-                            <div
-                              key={entry.weekId}
-                              className="flex items-center gap-3 text-sm"
-                            >
-                              <span className="text-muted-foreground w-20">
-                                {entry.weekId}
-                              </span>
-                              <span className="text-foreground">
-                                {entry.assigneeName}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                  <Badge
-                  variant={
-                    group.assignmentType === "fixed" ? "secondary" : "outline"
-                  }
-                >
-                  {currentAssignee || "—"}
+                <Badge variant={group.assignmentType === "fixed" ? "secondary" : "outline"}>
+                  {group.assignmentType === "fixed"
+                    ? group.fixedAssignees.length > 0
+                      ? group.fixedAssignees.map((id) => memberNames[id] ?? id).join(", ")
+                      : "Unassigned"
+                    : "Rotation"}
                 </Badge>
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
+              {group.assignmentType === 'rotation' && onRotateNow && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onRotateNow}
+                  aria-label="Rotate now"
+                  title="Rotate now"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -157,8 +130,8 @@ export function ChoreGroupCard({
           </div>
         </CardHeader>
 
-        <CardContent className="pt-0 space-y-2">
-          <div className="space-y-1">
+        <CardContent className="pt-0 px-0">
+          <div >
             {group.chores.map((chore) => (
               <InlineChoreRow
                 key={chore.choreId}
@@ -178,13 +151,12 @@ export function ChoreGroupCard({
             ))}
 
             {/* Always-visible add row */}
-            <div className="flex items-center gap-1 pt-1">
+            <div className="flex items-center gap-1 py-3 px-4 bg-input">
               <Input
                 ref={addNameRef}
                 value={newChoreName}
                 onChange={(e) => setNewChoreName(e.target.value)}
                 onKeyDown={handleAddKeyDown}
-                className="h-7 text-sm"
                 placeholder="Add a chore…"
                 disabled={addingSaving}
               />

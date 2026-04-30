@@ -26,6 +26,9 @@ export const recipes = (familyId: string) =>
 export const meals = (familyId: string) =>
   `families/${familyId}/meals`
 
+export const pendingProfiles = (familyId: string) =>
+  `families/${familyId}/pendingProfiles`
+
 // ─── Aggregate document paths ────────────────────────────────────────────────
 export const aggregateMealHistory = (familyId: string) =>
   `families/${familyId}/aggregates/mealHistory`

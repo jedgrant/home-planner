@@ -38,9 +38,14 @@ interface AssignTasksInput {
 }
 
 export interface TaskAssignment {
-  recipeIndex: number
-  taskIndex: number
-  recipeName: string
+  /** ID of the MealItem */
+  itemId: string
+  itemName: string
+  /** ID of the MealComponent within the item */
+  componentId: string
+  componentName: string
+  /** ID of the MealTask within the component */
+  taskId: string
   taskDescription: string
   difficulty: TaskDifficulty
   assigneeId: string

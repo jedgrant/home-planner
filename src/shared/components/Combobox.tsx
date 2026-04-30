@@ -29,7 +29,7 @@ interface ComboboxProps {
   searchPlaceholder?: string
   emptyText?: string
   disabled?: boolean
-  className?: string
+  size?: "xs" | "sm" | "default" | "lg" | "xl"
 }
 
 export function Combobox({
@@ -40,7 +40,7 @@ export function Combobox({
   searchPlaceholder = "Search…",
   emptyText = "No results found.",
   disabled = false,
-  className,
+  size = "default",
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [inputValue, setInputValue] = React.useState("")
@@ -73,8 +73,12 @@ export function Combobox({
         aria-expanded={open}
         disabled={disabled}
         className={cn(
-          "inline-flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm font-normal transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-          className
+          "inline-flex w-full items-center justify-between rounded-lg border border-input bg-background px-3 text-sm font-normal transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+          size === "default" && "h-10",
+          size === "sm" && "h-8",
+          size === "xs" && "h-7 text-xs",
+          size === "lg" && "h-12 text-base",
+          size === "xl" && "h-14 text-lg",
         )}
       >
         <span className={cn(!value && "text-muted-foreground")}>

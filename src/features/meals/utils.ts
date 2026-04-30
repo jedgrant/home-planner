@@ -10,20 +10,19 @@ import type { Meal, MealStatus } from '@/shared/types/meals'
 export function deriveMealStatus(meal: Meal): MealStatus {
   if (meal.status === 'served') return 'served'
 
-  const freeForm = meal.freeFormItems ?? []
+  const hasEntree = meal.items.some((i) => i.courseType === 'entree')
 
-  const hasEntree =
-    meal.recipes.some((r) => r.courseType === 'entree') ||
-    freeForm.some((i) => i.courseType === 'entree')
-
-  const hasSide =
-    meal.recipes.some(
-      (r) => r.courseType === 'side' || r.courseType === 'salad' || r.courseType === 'fruit'
-    ) || freeForm.some((i) => i.courseType === 'side' || i.courseType === 'topping')
+  const hasSide = meal.items.some(
+    (i) => i.courseType === 'side' || i.courseType === 'salad' || i.courseType === 'fruit'
+  )
 
   const allPrepAssigned =
-    meal.recipes.length > 0 &&
-    meal.recipes.every((r) => r.tasks.every((t) => t.assigneeId !== null))
+    meal.items.length > 0 &&
+    meal.items.every((item) =>
+      item.components.every((comp) =>
+        comp.tasks.length === 0 || comp.tasks.every((t) => t.assigneeId !== null)
+      )
+    )
 
   // If cleanupTasks is undefined the defaults apply (all unassigned) → incomplete
   const allCleanupAssigned =

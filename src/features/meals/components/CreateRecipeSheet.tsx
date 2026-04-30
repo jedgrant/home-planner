@@ -155,19 +155,20 @@ export function CreateRecipeSheet({
       parsed?.prepTasks.map((t, i) => ({
         taskId: nanoid(),
         description: t.description,
-        difficulty: t.difficulty,
         order: t.order ?? i,
       })) ?? [];
+    const hasContent = ingredients.length > 0 || prepTasks.length > 0 || !!parsed?.description;
     const id = await createMutation.mutateAsync({
       familyId,
       name: values.name,
       courseType: values.courseType,
-      description: parsed?.description ?? "",
+      description: "",
       servingSize: values.servingSize ?? 0,
       visibility: "private",
       sourceGlobalRecipeId: null,
-      ingredients,
-      prepTasks,
+      components: hasContent
+        ? [{ componentId: nanoid(), name: values.name, notes: parsed?.description, ingredients, tasks: prepTasks }]
+        : [],
       archived: false,
       createdBy: user?.uid ?? "",
     });
@@ -188,11 +189,13 @@ export function CreateRecipeSheet({
           name="courseType"
           render={({ field }) => (
             <FormItem className="flex-1">
-              <FormLabel>Dish to prepare</FormLabel>
+              <FormLabel>Type of dish</FormLabel>
               <Select value={field.value} onValueChange={field.onChange}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue>
+                      {COURSE_ITEMS.find((c) => c.value === field.value)?.label}
+                    </SelectValue>
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -302,7 +305,7 @@ export function CreateRecipeSheet({
                 <>
                   {/* Prompt-style input */}
                   <div
-                    className="rounded-2xl border bg-card shadow-sm focus-within:ring-2 focus-within:ring-ring transition-shadow"
+                    className="rounded-2xl border bg-background shadow-sm focus-within:ring-2 focus-within:ring-ring transition-shadow"
                     onPaste={handlePaste}
                   >
                     <Textarea

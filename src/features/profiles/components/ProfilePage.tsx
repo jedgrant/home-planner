@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "@/shared/lib/firebase";
 import {
@@ -20,7 +20,8 @@ import { PhotoCropDialog } from "./PhotoCropDialog";
 
 export function ProfilePage() {
   const { userId } = useParams<{ userId: string }>();
-  const { user: currentUser } = useAuthStore();
+  const { user: currentUser, setUser } = useAuthStore();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: profile, isLoading } = useUserProfile(userId ?? null);
 
@@ -76,6 +77,9 @@ export function ProfilePage() {
     try {
       const url = await updatePhotoUrl(profile.userId, blob);
       setPhotoUrl(url);
+      if (isOwnProfile && currentUser) {
+        setUser({ ...currentUser, photoUrl: url });
+      }
       await queryClient.invalidateQueries({ queryKey: ["userProfile", profile.userId] });
       await queryClient.invalidateQueries({ queryKey: ["familyMembers", profile.familyId] });
     } finally {
@@ -118,7 +122,7 @@ export function ProfilePage() {
     .slice(0, 2);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 p-6">
+    <div className="mx-auto max-w-2xl space-y-6 p-6">
       {cropSrc && (
         <PhotoCropDialog
           imageSrc={cropSrc}
@@ -162,7 +166,7 @@ export function ProfilePage() {
               <input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="text-3xl font-semibold text-foreground bg-transparent border-b border-transparent focus:border-border focus:outline-none w-full leading-tight"
+                className="font-heading text-3xl font-semibold text-foreground bg-transparent border-b border-transparent hover:text-primary focus:border-primary focus:outline-none w-full leading-tight transition-colors cursor-text"
                 aria-label="Display name"
               />
               {nameSaving && (
@@ -187,14 +191,14 @@ export function ProfilePage() {
 
       <Separator />
 
-      <section className="space-y-3">
+      <section className="space-y-1">
         <h2 className="text-lg font-semibold text-foreground">Chore history</h2>
         <p className="text-sm text-muted-foreground">Coming soon.</p>
       </section>
 
       <Separator />
 
-      <section className="space-y-3">
+      <section className="space-y-1">
         <h2 className="text-lg font-semibold text-foreground">Meal task history</h2>
         <p className="text-sm text-muted-foreground">Coming soon.</p>
       </section>
@@ -203,6 +207,15 @@ export function ProfilePage() {
       {isOwnProfile && (
         <div className="md:hidden pt-2">
           <Separator className="mb-6" />
+          {isParent && (
+            <Button
+              variant="outline"
+              className="w-full mb-3"
+              onClick={() => navigate("/settings")}
+            >
+              Family settings
+            </Button>
+          )}
           <Button
             variant="ghost"
             className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"

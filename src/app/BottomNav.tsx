@@ -4,7 +4,7 @@ import {
   CheckSquare,
   ShoppingCart,
   UtensilsCrossed,
-  Settings,
+  BookOpen,
 } from 'lucide-react'
 import { useAuthStore } from '@/shared/lib/authStore'
 
@@ -13,14 +13,14 @@ const parentNavItems = [
   { to: '/chores', label: 'Chores', icon: CheckSquare },
   { to: '/grocery', label: 'Grocery', icon: ShoppingCart },
   { to: '/meals', label: 'Meals', icon: UtensilsCrossed, end: true as const },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/recipes', label: 'Recipes', icon: BookOpen },
 ]
 
 const childNavItems = [
   { to: '/child-dashboard', label: 'Home', icon: LayoutDashboard },
   { to: '/chores', label: 'Chores', icon: CheckSquare },
   { to: '/meals', label: 'Meals', icon: UtensilsCrossed, end: true as const },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/recipes', label: 'Recipes', icon: BookOpen },
 ]
 
 export function BottomNav() {

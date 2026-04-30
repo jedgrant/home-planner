@@ -50,7 +50,7 @@ export function SuggestEntreeSheet({ meal, open, onOpenChange }: SuggestEntreeSh
         const id = m.recipeIds[i]
         if (!seen.has(id)) {
           seen.add(id)
-          result.push({ recipeId: id, recipeName: m.recipeNames[i], date: m.date })
+          result.push({ recipeId: id, recipeName: m.itemNames[i], date: m.date })
           if (result.length >= 14) break
         }
       }
@@ -181,13 +181,14 @@ export function SuggestEntreeSheet({ meal, open, onOpenChange }: SuggestEntreeSh
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">Search recipes</p>
             <div className="flex gap-2">
+              <div className="flex-1">
               <Combobox
                 options={recipeOptions}
                 value={selectedRecipeId}
                 onChange={setSelectedRecipeId}
                 placeholder="Search recipes…"
-                className="flex-1"
               />
+              </div>
               <Button
                 onClick={() => handleSuggestRecipe(selectedRecipeId)}
                 disabled={!selectedRecipeId || isMutating}
