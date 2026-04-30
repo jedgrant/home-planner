@@ -34,6 +34,15 @@ export function UpdatePrompt() {
     },
   })
 
+  // When the new SW takes control, reload to apply it.
+  // This is more reliable than relying on updateServiceWorker() alone,
+  // which can silently succeed without triggering a navigation on desktop.
+  useEffect(() => {
+    const handleControllerChange = () => window.location.reload()
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
+  }, [])
+
   // Start the countdown as soon as a refresh is available
   useEffect(() => {
     if (!needRefresh) return
@@ -57,7 +66,7 @@ export function UpdatePrompt() {
     <button
       type="button"
       onClick={() => updateServiceWorker(true)}
-      className="fixed top-0 left-0 right-0 z-[100] flex w-full items-center justify-center gap-2.5 bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-md transition-opacity hover:opacity-90 active:opacity-80"
+      className="fixed top-0 left-0 right-0 z-100 flex w-full items-center justify-center gap-2.5 bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-md transition-opacity hover:opacity-90 active:opacity-80"
       aria-live="assertive"
       aria-label="New version available — updating now"
     >

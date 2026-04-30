@@ -173,7 +173,7 @@ export function StoreListPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-card rounded-xl shadow-sm px-4">
+        <div className="bg-card rounded-xl shadow-sm">
           {pendingItems.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               Nothing left to buy — great work!
@@ -209,7 +209,7 @@ export function StoreListPage() {
           )}
 
           {/* Inline add input */}
-          <div className="relative py-2.5 border-t border-border/40">
+          <div className="relative py-2.5 border-t border-border/40 px-4">
             <div className="flex items-center gap-2">
               <input
                 ref={addInputRef}

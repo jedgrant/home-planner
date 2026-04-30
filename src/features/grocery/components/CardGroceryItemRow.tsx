@@ -8,6 +8,9 @@ import type { GroceryItem } from '@/shared/types/grocery'
 
 const QUANTITIES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
 
+const SWIPE_REVEAL = 72
+const SWIPE_COMMIT = 160
+
 interface CardGroceryItemRowProps {
   item: GroceryItem
   onComplete: () => void
@@ -29,11 +32,24 @@ export function CardGroceryItemRow({
   const [editName, setEditName] = useState(item.name)
   const [showNote, setShowNote] = useState(Boolean(item.note))
   const [editNote, setEditNote] = useState(item.note)
+  const [swipeX, setSwipeX] = useState(0)
+  const [swiping, setSwiping] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const swipeRef = useRef<HTMLDivElement>(null)
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+  const axisLocked = useRef<'h' | 'v' | null>(null)
 
   // Keep local state in sync when Firestore data changes
   useEffect(() => { setEditName(item.name) }, [item.name])
   useEffect(() => { setEditNote(item.note) }, [item.note])
+
+  useEffect(() => {
+    const el = swipeRef.current
+    if (!el) return
+    el.addEventListener('touchmove', onTouchMoveNative, { passive: false })
+    return () => el.removeEventListener('touchmove', onTouchMoveNative)
+  })
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -60,15 +76,69 @@ export function CardGroceryItemRow({
     if (qty !== item.quantity) await onEdit(item.name, qty, item.note)
   }
 
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+    axisLocked.current = null
+    setSwiping(true)
+  }
+
+  function onTouchMoveNative(e: TouchEvent) {
+    const dx = e.touches[0].clientX - touchStartX.current
+    const dy = e.touches[0].clientY - touchStartY.current
+    if (!axisLocked.current) {
+      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return
+      axisLocked.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+    }
+    if (axisLocked.current === 'v') return
+    e.preventDefault()
+    setSwipeX(Math.min(0, dx))
+  }
+
+  function onTouchEnd() {
+    setSwiping(false)
+    if (swipeX <= -SWIPE_COMMIT) {
+      setSwipeX(-window.innerWidth)
+      setTimeout(() => onRemove(), 220)
+    } else if (swipeX <= -SWIPE_REVEAL / 2) {
+      setSwipeX(-SWIPE_REVEAL)
+    } else {
+      setSwipeX(0)
+    }
+  }
+
+  const deleteProgress = Math.min(1, -swipeX / SWIPE_COMMIT)
+  const showDeleteHint = swipeX < -8
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group flex flex-col gap-0.5 py-2 border-b border-border/40 last:border-0',
+        'relative overflow-hidden border-b border-border/40 last:border-0 pl-4',
         isDragging && 'opacity-25',
       )}
     >
+      {showDeleteHint && (
+        <div
+          className="absolute inset-0 flex items-center justify-end pr-5 bg-destructive cursor-pointer"
+          onClick={onRemove}
+          aria-label={`Remove ${item.name}`}
+          role="button"
+        >
+          <Trash2
+            className="h-5 w-5 text-white transition-transform duration-150"
+            style={{ transform: `scale(${0.8 + deleteProgress * 0.4})` }}
+          />
+        </div>
+      )}
+      <div
+        className="group flex flex-col gap-0.5 py-2 bg-card"
+        ref={swipeRef}
+        style={{ transform: `translateX(${swipeX}px)`, transition: swiping ? 'none' : 'transform 220ms ease' }}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
       <div className="flex items-center gap-1.5">
         {/* Drag handle */}
         <button
@@ -139,10 +209,10 @@ export function CardGroceryItemRow({
           <StickyNote className="h-3.5 w-3.5" />
         </button>
 
-        {/* Remove */}
+        {/* Remove — desktop hover-reveal; mobile uses swipe */}
         <button
           onClick={onRemove}
-          className="shrink-0 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"
+          className="hidden md:block shrink-0 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"
           aria-label={`Remove ${item.name}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -161,6 +231,7 @@ export function CardGroceryItemRow({
           />
         </div>
       )}
+      </div>
     </div>
   )
 }

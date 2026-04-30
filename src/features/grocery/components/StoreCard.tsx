@@ -162,7 +162,7 @@ export function StoreCard({
           )}
         </CardHeader>
 
-        <CardContent className="flex-1 flex flex-col py-0">
+        <CardContent className="flex-1 flex flex-col py-0 px-0">
           {/* Droppable + sortable item list */}
           <div ref={setNodeRef} className="min-h-8">
             <SortableContext
