@@ -42,6 +42,13 @@ interface ComponentIngredientListProps {
   disabled?: boolean
 }
 
+interface EditDraft {
+  name: string
+  quantity: string
+  unit: string | null
+  storeId: string | null
+}
+
 export function ComponentIngredientList({
   ingredients,
   onChange,
@@ -52,6 +59,8 @@ export function ComponentIngredientList({
   const [newQty, setNewQty] = useState('')
   const [newUnit, setNewUnit] = useState<string | null>(null)
   const [newStoreId, setNewStoreId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState<EditDraft>({ name: '', quantity: '', unit: null, storeId: null })
 
   const storeOptions = stores.map((s) => ({ value: s.storeId, label: s.name }))
 
@@ -79,10 +88,83 @@ export function ComponentIngredientList({
     onChange(ingredients.filter((i) => i.ingredientId !== ingredientId))
   }
 
+  function handleEditStart(ing: Ingredient) {
+    setEditingId(ing.ingredientId)
+    setEditDraft({ name: ing.name, quantity: ing.quantity ?? '', unit: ing.unit ?? null, storeId: ing.storeId ?? null })
+  }
+
+  function handleEditSave() {
+    if (!editingId || !editDraft.name.trim()) return
+    const store = editDraft.storeId ? stores.find((s) => s.storeId === editDraft.storeId) : undefined
+    onChange(ingredients.map((i) =>
+      i.ingredientId === editingId
+        ? { ...i, name: editDraft.name.trim(), quantity: editDraft.quantity.trim(), unit: editDraft.unit, storeId: editDraft.storeId, storeName: store?.name ?? null }
+        : i
+    ))
+    setEditingId(null)
+  }
+
+  function handleEditCancel() {
+    setEditingId(null)
+  }
+
   return (
-    <div className="space-y-1.5">
+    <div>
       {ingredients.map((ing) => (
-        <div key={ing.ingredientId} className="flex items-center gap-1.5 text-sm">
+        editingId === ing.ingredientId ? (
+          <div key={ing.ingredientId} className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex-2 min-w-28">
+              <Input
+                autoFocus
+                value={editDraft.name}
+                onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleEditSave(); if (e.key === 'Escape') handleEditCancel() }}
+                aria-label="Ingredient name"
+              />
+            </div>
+            <div className="w-16 shrink-0">
+              <Input
+                value={editDraft.quantity}
+                onChange={(e) => setEditDraft((d) => ({ ...d, quantity: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleEditSave(); if (e.key === 'Escape') handleEditCancel() }}
+                aria-label="Quantity"
+              />
+            </div>
+            <div className="w-20 shrink-0">
+              <Select value={editDraft.unit ?? ''} onValueChange={(v) => setEditDraft((d) => ({ ...d, unit: v || null }))}>
+                <SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger>
+                <SelectContent>
+                  {UNIT_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {stores.length > 0 && (
+              <div className="w-28 shrink-0">
+                <Select value={editDraft.storeId ?? ''} onValueChange={(v) => setEditDraft((d) => ({ ...d, storeId: v || null }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Store">
+                      {editDraft.storeId ? (stores.find((s) => s.storeId === editDraft.storeId)?.name ?? editDraft.storeId) : undefined}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {storeOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <Button type="button" size="sm" onClick={handleEditSave}>Save</Button>
+            <Button type="button" size="sm" variant="ghost" onClick={handleEditCancel}>Cancel</Button>
+          </div>
+        ) : (
+        <div
+          key={ing.ingredientId}
+          className={`flex items-center gap-1.5 text-sm${!disabled ? ' cursor-pointer rounded hover:bg-muted/50 -mx-1 px-1 py-2' : ''}`}
+          onClick={!disabled ? () => handleEditStart(ing) : undefined}
+          role={!disabled ? 'button' : undefined}
+          tabIndex={!disabled ? 0 : undefined}
+          onKeyDown={!disabled ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleEditStart(ing) } : undefined}
+          aria-label={!disabled ? `Edit ${ing.name}` : undefined}
+        >
           <span className="flex-1 min-w-0 truncate">{ing.name}</span>
           {(ing.quantity || ing.unit) && (
             <span className="text-muted-foreground shrink-0">
@@ -98,18 +180,19 @@ export function ComponentIngredientList({
               variant="ghost"
               size="icon"
               className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
-              onClick={() => handleRemove(ing.ingredientId)}
+              onClick={(e) => { e.stopPropagation(); handleRemove(ing.ingredientId) }}
               aria-label={`Remove ${ing.name}`}
             >
               <Trash2 className="h-3 w-3" />
             </Button>
           )}
         </div>
+        )
       ))}
 
       {!disabled && (
         <div className="flex items-center gap-1.5 pt-1 flex-wrap">
-          <div className="flex-[2] min-w-28">
+          <div className="flex-2 min-w-28">
           <Input
             placeholder="Ingredient name"
             value={newName}

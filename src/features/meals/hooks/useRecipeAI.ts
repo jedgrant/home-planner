@@ -31,13 +31,19 @@ interface ParseRecipeInput {
   imageMediaType?: string
 }
 
+interface RecipeComponentOutput {
+  name: string
+  notes: string
+  ingredients: { name: string; quantity: string }[]
+  tasks: { description: string; difficulty: TaskDifficulty; order: number }[]
+}
+
 interface ParseRecipeOutput {
   name: string
   courseType: CourseType
   description: string
   servingSize: number
-  ingredients: { name: string; quantity: string }[]
-  prepTasks: { description: string; difficulty: TaskDifficulty; order: number }[]
+  components: RecipeComponentOutput[]
 }
 
 export function useAISuggestRecipe() {

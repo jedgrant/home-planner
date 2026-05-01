@@ -142,33 +142,34 @@ export function CreateRecipeSheet({
 
   async function onSubmit(values: FormValues) {
     const parsed = parseMutation.data;
-    const ingredients =
-      parsed?.ingredients.map((ing) => ({
-        ingredientId: nanoid(),
-        name: ing.name,
-        quantity: ing.quantity,
-        unit: null,
-        storeId: null,
-        storeName: null,
+    const components =
+      parsed?.components.map((comp) => ({
+        componentId: nanoid(),
+        name: comp.name,
+        notes: comp.notes || undefined,
+        ingredients: comp.ingredients.map((ing) => ({
+          ingredientId: nanoid(),
+          name: ing.name,
+          quantity: ing.quantity,
+          unit: null,
+          storeId: null,
+          storeName: null,
+        })),
+        tasks: comp.tasks.map((t, i) => ({
+          taskId: nanoid(),
+          description: t.description,
+          order: t.order ?? i,
+        })),
       })) ?? [];
-    const prepTasks =
-      parsed?.prepTasks.map((t, i) => ({
-        taskId: nanoid(),
-        description: t.description,
-        order: t.order ?? i,
-      })) ?? [];
-    const hasContent = ingredients.length > 0 || prepTasks.length > 0 || !!parsed?.description;
     const id = await createMutation.mutateAsync({
       familyId,
       name: values.name,
       courseType: values.courseType,
-      description: "",
+      description: parsed?.description ?? "",
       servingSize: values.servingSize ?? 0,
       visibility: "private",
       sourceGlobalRecipeId: null,
-      components: hasContent
-        ? [{ componentId: nanoid(), name: values.name, notes: parsed?.description, ingredients, tasks: prepTasks }]
-        : [],
+      components,
       archived: false,
       createdBy: user?.uid ?? "",
     });
@@ -309,7 +310,7 @@ export function CreateRecipeSheet({
                     onPaste={handlePaste}
                   >
                     <Textarea
-                      placeholder="Paste a recipe image or text, describe a dish, or drop in files to get started"
+                      placeholder="Paste a URL, recipe text, or image — or just describe what you're craving"
                       className="min-h-[120px] resize-none border-0 bg-transparent shadow-none focus-visible:ring-0 p-4 text-sm"
                       value={importText}
                       onChange={(e) => setImportText(e.target.value)}
@@ -375,7 +376,7 @@ export function CreateRecipeSheet({
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground text-center">
-                    You can paste text, attach a photo, or do both.
+                    Works with URLs, pasted recipes, photos, dish names, or descriptions like &ldquo;a cozy chicken soup for the winter&rdquo;.
                   </p>
                 </>
               ) : (
@@ -385,7 +386,7 @@ export function CreateRecipeSheet({
                     className="space-y-4"
                   >
                     <p className="text-sm text-muted-foreground">
-                      AI extracted the following. Review and edit before saving.
+                      Review and edit the details below before saving.
                     </p>
                     <FormField
                       control={form.control}
@@ -403,9 +404,12 @@ export function CreateRecipeSheet({
                     <CourseAndServesFields />
                     {parseMutation.data && (
                       <p className="text-sm text-muted-foreground rounded-lg bg-muted p-3">
-                        {parseMutation.data.ingredients.length} ingredients and{" "}
-                        {parseMutation.data.prepTasks.length} prep tasks
-                        extracted — fully editable on the recipe page.
+                        {parseMutation.data.components.reduce((sum, c) => sum + c.ingredients.length, 0)} ingredients and{" "}
+                        {parseMutation.data.components.reduce((sum, c) => sum + c.tasks.length, 0)} prep tasks across{" "}
+                        {parseMutation.data.components.length === 1
+                          ? "1 component"
+                          : `${parseMutation.data.components.length} components`}{" "}
+                        &mdash; fully editable on the recipe page.
                       </p>
                     )}
                     <div className="flex gap-2">

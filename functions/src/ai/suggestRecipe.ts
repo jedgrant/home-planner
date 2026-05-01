@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
-import { geminiApiKey, getGemini } from '../shared/gemini'
+import { geminiApiKey } from '../shared/gemini'
+import { generateRecipeFromScratch } from '../shared/generateRecipe'
 import type { TaskDifficulty } from '../shared/types'
 
 interface SuggestRecipeInput {
@@ -24,34 +25,9 @@ export const suggestRecipe = onCall<SuggestRecipeInput>(
       throw new HttpsError('invalid-argument', 'recipeName is required.')
     }
 
-    const prompt = `You are a recipe assistant. Generate a complete recipe for "${recipeName}".
-
-Return a JSON object with exactly this shape:
-{
-  "description": string,        // 1–3 sentence description / cooking notes
-  "servingSize": number,        // typical number of people it serves
-  "ingredients": [
-    { "name": string, "quantity": string }
-  ],
-  "prepTasks": [
-    { "description": string, "difficulty": "easy"|"medium"|"hard", "order": number }
-  ]
-}
-
-Rules:
-- All task descriptions should be action-oriented (e.g. "Dice the onions").
-- difficulty reflects physical/skill effort: easy = basic, medium = some skill, hard = complex technique.
-- order starts at 0 and follows logical cooking sequence.
-- Return only valid JSON, no markdown fences.`
-
-    try {
-      const model = getGemini()
-      const result = await model.generateContent(prompt)
-      const json = result.response.text()
-      return JSON.parse(json) as SuggestRecipeOutput
-    } catch (err) {
-      console.error('suggestRecipe Gemini error', err)
-      throw new HttpsError('internal', 'Failed to generate recipe.')
-    }
+    const result = await generateRecipeFromScratch(recipeName.trim())
+    const ingredients = result.components.flatMap((c) => c.ingredients)
+    const prepTasks = result.components.flatMap((c) => c.tasks)
+    return { description: result.description, servingSize: result.servingSize, ingredients, prepTasks }
   }
 )

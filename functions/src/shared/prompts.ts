@@ -10,8 +10,11 @@
  * individual people (often a child helping a parent).
  */
 export const PREP_TASKS_GUIDANCE = `prepTasks rules:
-- Use for any discrete step that would take 5 or more minutes on its own, or any step that could meaningfully be handed off to a separate person.
-- Examples that SHOULD be prep tasks: "Chop and wash the lettuce", "Defrost and brown the ground beef", "Boil and drain the pasta", "Dice the onions and peppers".
-- Examples that should NOT be prep tasks (too quick/trivial): "Open the can", "Sprinkle salt".
-- For simple sides or toppings where all steps are quick and done by one person (e.g. canned corn, sliced fruit), leave prepTasks empty.
-- Each prep task must be a single, assignable action with enough detail to stand alone (e.g. "Brown 1 lb ground beef in a skillet over medium heat until no pink remains" rather than just "Cook beef").`
+The ONLY test for whether a step is a prepTask: "Could a different person do this step simultaneously while someone else does a different step on the same component?"
+
+- YES (make a task): Prepping individual vegetables — chopping carrots while someone else chops broccoli; trimming chicken while someone else mixes a marinade; making a sauce while someone else cooks protein.
+- NO (put in notes instead): Any step that must happen sequentially after a previous step — you cannot stir-fry vegetables before they are chopped, so stir-frying is NOT a task. Cooking, baking, simmering, assembling — these are notes.
+- If a component only has ONE task, do not create a task at all. Put the full instructions in the component's notes field instead. tasks must be empty ([]).
+- Task description format: "Short name: full detail" e.g. "Prep broccoli: Cut into 1-inch florets and rinse." or "Trim chicken: Remove fat and sinew, cut into 1-inch cubes."
+- difficulty: easy = basic prep (peeling, rinsing), medium = some skill (julienne, deboning), hard = complex technique.
+- order starts at 0 and follows the logical prep sequence within the component.`

@@ -3,6 +3,7 @@ import { defineSecret } from 'firebase-functions/params'
 import { geminiApiKey, getGemini } from '../shared/gemini'
 import { PREP_TASKS_GUIDANCE } from '../shared/prompts'
 import { fetchAndExtractRecipeSchema, normalizeRecipeInstructions } from '../shared/jsonLd'
+import { generateRecipeFromScratch } from '../shared/generateRecipe'
 import type { RecipeSchema } from '../shared/jsonLd'
 import type { TaskDifficulty, CourseType } from '../shared/types'
 
@@ -16,13 +17,20 @@ interface ParseRecipeInput {
   imageMediaType?: string
 }
 
+interface RecipeComponentOutput {
+  name: string
+  /** Cooking instructions for this component (sequential steps, not parallel tasks) */
+  notes: string
+  ingredients: { name: string; quantity: string }[]
+  tasks: { description: string; difficulty: TaskDifficulty; order: number }[]
+}
+
 interface ParseRecipeOutput {
   name: string
   courseType: CourseType
   description: string
   servingSize: number
-  ingredients: { name: string; quantity: string }[]
-  prepTasks: { description: string; difficulty: TaskDifficulty; order: number }[]
+  components: RecipeComponentOutput[]
 }
 
 // ─── URL / fetch helpers ──────────────────────────────────────────────────────
@@ -192,17 +200,29 @@ Return a JSON object with exactly this shape:
   "courseType": "entree"|"side"|"salad"|"fruit"|"dessert",
   "description": string,
   "servingSize": number,
-  "ingredients": [{ "name": string, "quantity": string }],
-  "prepTasks": [{ "description": string, "difficulty": "easy"|"medium"|"hard", "order": number }]
+  "components": [
+    {
+      "name": string,
+      "notes": string,
+      "ingredients": [{ "name": string, "quantity": string }],
+      "tasks": [{ "description": string, "difficulty": "easy"|"medium"|"hard", "order": number }]
+    }
+  ]
 }
 
-Rules:
+Component rules:
+- Split the recipe into natural sub-assemblies that each have their own distinct set of ingredients and can be prepped somewhat independently. Examples: a stir fry → ["Chicken", "Vegetables", "Sauce", "Rice"]; pasta bake → ["Pasta", "Meat Sauce", "Cheese Topping"]; cookies → ["Cookies"] (single component).
+- Each component has a name, notes (cooking instructions), its own ingredients list, and tasks.
+- Assign every ingredient to exactly one component. Do not drop any ingredient.
+- Each ingredient name must be sentence-cased (e.g. "All-purpose flour", "Olive oil", "Garlic cloves").
+- notes: sequential cooking instructions for this component written in a friendly imperative tone (e.g. "Bring a large pot of salted water to a boil. Cook pasta until al dente, about 8 min. Drain and set aside."). This is NOT a task list — it is the cooking narrative one person follows.
+
+Top-level field rules:
 - name: use the provided name, capitalised properly.
 - courseType: infer from the name and category hint.
 - servingSize: parse a number from the yield (e.g. "24 rolls" → 24, "6-8 servings" → 7). Use 4 if unclear.
-- ingredients: split each raw ingredient string into { name, quantity } where quantity is the measurement (e.g. "2 cups") and name is the ingredient sentence-cased (e.g. "All-purpose flour", "Olive oil"). Preserve every ingredient — do not drop any.
-- description: 1-3 sentences about the dish in a friendly tone. End with "Recipe from: ${sourceUrl}". Do NOT list steps here.
-- Only generate prepTasks from the cooking instructions provided above. Do not invent steps.
+- description: 1-3 sentences about what the dish is and how it tastes, in a friendly tone. End with "Recipe from: ${sourceUrl}". Do NOT list steps here.
+
 ${PREP_TASKS_GUIDANCE}
 - Return only valid JSON, no markdown fences.`
 
@@ -222,10 +242,6 @@ async function parseWithContent(
   imageMediaType: string | null,
   sourceUrl: string | null,
 ): Promise<ParseRecipeOutput> {
-  const sourceRule = sourceUrl
-    ? `- description: The 1-3 sentence overview described above. End the description with "Recipe from: ${sourceUrl}". Never leave this empty.`
-    : `- description: The 1-3 sentence overview described above. Include what it tastes like, how it's typically served, and what sides or toppings it pairs well with. Never leave this empty.`
-
   const systemPrompt = `You are a recipe parsing assistant. Extract a structured recipe from the provided content (text, image, or both).
 
 Return a JSON object with exactly this shape:
@@ -236,11 +252,13 @@ Return a JSON object with exactly this shape:
   "courseType": "entree"|"side"|"salad"|"fruit"|"dessert",
   "description": string,
   "servingSize": number,
-  "ingredients": [
-    { "name": string, "quantity": string }
-  ],
-  "prepTasks": [
-    { "description": string, "difficulty": "easy"|"medium"|"hard", "order": number }
+  "components": [
+    {
+      "name": string,
+      "notes": string,
+      "ingredients": [{ "name": string, "quantity": string }],
+      "tasks": [{ "description": string, "difficulty": "easy"|"medium"|"hard", "order": number }]
+    }
   ]
 }
 
@@ -253,13 +271,14 @@ Rules (apply only when found is true):
 - name: the recipe's proper title.
 - courseType: best guess based on the dish type.
 - servingSize: number of servings; use 4 if unknown.
-- ingredients: CRITICAL — you MUST extract every ingredient listed in the content. Each entry has a name and a quantity (e.g. "2 cups"). Split combined entries into separate items. Ingredient names must be sentence-cased (first letter capitalised, rest lowercase) e.g. "All-purpose flour", "Olive oil", "Garlic cloves".
-${sourceRule}
+- description: 1-3 friendly sentences about what the dish is and how it tastes. Do NOT list steps here.${sourceUrl ? ' End with "Recipe from: ' + sourceUrl + '".' : ' Include what it tastes like and how it is typically served.'}
 
-CRITICAL — description (notes) vs. prepTasks:
-The app is used by families cooking together. prepTasks are assigned to individual people (often a child helping a parent).
+Component rules:
+- Split the recipe into natural sub-assemblies that each have their own distinct ingredients and can be prepped somewhat independently. Examples: a stir fry → ["Chicken", "Vegetables", "Sauce", "Rice"]; pasta bake → ["Pasta", "Meat Sauce", "Cheese Topping"]; cookies → ["Cookies"] (single component).
+- Assign every ingredient to exactly one component. CRITICAL: do not drop any ingredient.
+- Each ingredient name must be sentence-cased (e.g. "All-purpose flour", "Olive oil", "Garlic cloves").
+- notes: sequential cooking instructions for this component in friendly imperative tone (e.g. "Heat oil in a wok over high heat. Add chicken and cook 5-6 min until no longer pink. Set aside."). This is the cooking narrative — NOT a list of tasks.
 
-- description: The 1-3 sentence overview described above. Do NOT put step-by-step cooking instructions here.
 ${PREP_TASKS_GUIDANCE}
 
 - Return only valid JSON, no markdown fences.`
@@ -310,14 +329,91 @@ async function resolveUrlAndParse(query: string): Promise<ParseRecipeOutput> {
   return parseWithContent(jina.content, null, null, jina.sourceUrl)
 }
 
+// ─── Input classification ─────────────────────────────────────────────────────
+//
+// Ask Gemini to classify the input AND extract a clean recipe title in one call.
+// The title is used for Tavily search and for generateRecipeFromScratch so that
+// a vague prompt like "something cozy with chicken" becomes "Chicken Pot Pie"
+// rather than being sent verbatim to a search engine.
+
+type InputType = 'url' | 'recipe' | 'name' | 'vague'
+
+interface ClassifyResult {
+  type: InputType
+  recipeTitle: string | null
+}
+
+async function classifyInput(text: string): Promise<ClassifyResult> {
+  const prompt = `Classify the following user input for a recipe import feature and extract a clean recipe title.
+
+Return a JSON object with exactly this shape:
+{ "type": "url"|"recipe"|"name"|"vague", "recipeTitle": string | null }
+
+Classification rules:
+- "url"    — A URL or something that looks like a URL (e.g. "https://example.com/cookies", "allrecipes.com/chicken-soup"). Set recipeTitle to null.
+- "recipe" — Pasted recipe text that contains ingredients or cooking steps. Set recipeTitle to null.
+- "name"   — A specific, well-known dish or recipe name (e.g. "chocolate chip cookies", "chicken tikka masala"). Set recipeTitle to the name as-is, cleaned up.
+- "vague"  — A general, descriptive, or open-ended request (e.g. "something healthy", "easy weeknight dinner with chicken", "a cozy soup for winter"). Set recipeTitle to the best matching well-known recipe name (e.g. "Chicken Vegetable Soup").
+
+For "name" and "vague", recipeTitle should be a clean, properly capitalised recipe title suitable for a web search — not a sentence.
+
+Input: ${text.slice(0, 500)}
+
+Return only valid JSON, no markdown fences.`
+
+  try {
+    const result = await getGemini().generateContent(prompt)
+    const parsed = JSON.parse(result.response.text()) as { type?: string; recipeTitle?: string | null }
+    const type = parsed.type
+    if (type === 'url' || type === 'recipe' || type === 'name' || type === 'vague') {
+      return { type, recipeTitle: parsed.recipeTitle ?? null }
+    }
+  } catch {
+    // Classification failure — fall back to treating it as a name search
+  }
+  return { type: 'name', recipeTitle: null }
+}
+
+// ─── URL fetch chain ──────────────────────────────────────────────────────────
+//
+// Shared by the "url" classification path and the Tavily → URL path.
+// Tries JSON-LD (fast), then Jina, then site-scoped Tavily fallback.
+
+async function fetchUrlAndParse(url: string): Promise<ParseRecipeOutput> {
+  const schema = await fetchAndExtractRecipeSchema(url)
+  if (schema?.recipeIngredient?.length) {
+    console.log('parseRecipeFromContent: JSON-LD fast path', url, `(${schema.recipeIngredient.length} ingredients)`)
+    return parseWithSchema(schema, url)
+  }
+  console.log('parseRecipeFromContent: no JSON-LD, trying Jina', url)
+
+  const jina = await fetchUrlWithJina(url)
+  console.log('parseRecipeFromContent: Jina returned', jina.content.length, 'chars')
+
+  if (jina.content.length >= 500) {
+    return parseWithContent(jina.content, null, null, jina.sourceUrl)
+  }
+
+  // Jina returned minimal content — site is likely Cloudflare-protected.
+  // Fall back to a site-scoped Tavily search for the same page.
+  const parsedUrl = new URL(url)
+  const slug = parsedUrl.pathname.split('/').filter(Boolean).pop()?.replace(/-/g, ' ') ?? ''
+  if (!slug) {
+    throw new HttpsError('invalid-argument', "The recipe page couldn't be loaded. Try pasting the recipe text directly.")
+  }
+  const siteQuery = `${slug} site:${parsedUrl.hostname.replace(/^www\./, '')}`
+  console.log('parseRecipeFromContent: Jina blocked, Tavily site-scoped fallback:', siteQuery)
+  return resolveUrlAndParse(siteQuery)
+}
+
 // ─── Cloud Function ───────────────────────────────────────────────────────────
 //
-// Routing:
-//   URL input   → JSON-LD fast path (plain fetch, ~800 token Gemini call)
-//               → Jina Reader fallback if no JSON-LD found
-//   Name search → Tavily → JSON-LD fast path OR Jina fallback
-//   Long text   → direct full-context Gemini call
-//   Image only  → direct multimodal Gemini call
+// Routing (determined by a Gemini classification call, not heuristics):
+//   image only → multimodal Gemini
+//   "url"      → JSON-LD fast path → Jina → site-scoped Tavily
+//   "recipe"   → direct full-context Gemini (pasted text ± image)
+//   "name"     → Tavily search → JSON-LD or Jina on result URL
+//   "vague"    → same as "name"; if nothing found → generate from scratch
 
 export const parseRecipeFromContent = onCall<ParseRecipeInput>(
   { region: 'us-central1', secrets: [geminiApiKey, tavilyApiKey] },
@@ -330,55 +426,42 @@ export const parseRecipeFromContent = onCall<ParseRecipeInput>(
       throw new HttpsError('invalid-argument', 'Either text or imageBase64 is required.')
     }
 
-    // Image-only path — no text preprocessing, straight to multimodal Gemini
+    // Image-only — no text to classify, go straight to multimodal Gemini
     if (!text?.trim()) {
+      console.log('parseRecipeFromContent: image-only path')
       return parseWithContent('', imageBase64!, imageMediaType!, null)
     }
 
-    const normalised = normaliseUrl(text.trim())
-    const trimmed = normalised ?? text.trim()
+    const trimmed = text.trim()
+    const { type: inputType, recipeTitle } = await classifyInput(trimmed)
+    console.log('parseRecipeFromContent: classified input as', inputType, recipeTitle ? `→ "${recipeTitle}"` : '')
 
-    // URL path: try JSON-LD first (cheap plain fetch), fall back to Jina,
-    // then fall back to a site-scoped Tavily search if Jina is also blocked.
-    if (normalised) {
-      const schema = await fetchAndExtractRecipeSchema(trimmed)
-      if (schema?.recipeIngredient?.length) {
-        console.log('parseRecipeFromContent: JSON-LD fast path', trimmed, `(${schema.recipeIngredient.length} ingredients)`)
-        return parseWithSchema(schema, trimmed)
-      }
-      console.log('parseRecipeFromContent: no JSON-LD found, trying Jina', trimmed)
-
-      const jina = await fetchUrlWithJina(trimmed)
-      console.log('parseRecipeFromContent: Jina returned', jina.content.length, 'chars')
-
-      if (jina.content.length >= 500) {
-        return parseWithContent(jina.content, null, null, jina.sourceUrl)
+    switch (inputType) {
+      case 'url': {
+        const normalised = normaliseUrl(trimmed) ?? `https://${trimmed}`
+        return fetchUrlAndParse(normalised)
       }
 
-      // Jina returned empty/minimal content — the site is likely blocking Jina's
-      // IP range (common with Cloudflare-protected blogs). Fall back to Tavily
-      // using site: scoped to the same domain so we get the correct page.
-      const parsedUrl = new URL(trimmed)
-      const slug = parsedUrl.pathname.split('/').filter(Boolean).pop()?.replace(/-/g, ' ') ?? ''
-      if (!slug) {
-        throw new HttpsError(
-          'invalid-argument',
-          "The recipe page couldn't be loaded. Try pasting the recipe text directly."
-        )
+      case 'recipe':
+        return parseWithContent(trimmed, imageBase64 ?? null, imageMediaType ?? null, null)
+
+      case 'name': {
+        const searchQuery = recipeTitle ?? trimmed
+        return resolveUrlAndParse(searchQuery)
       }
-      const siteQuery = `${slug} site:${parsedUrl.hostname.replace(/^www\./, '')}`
-      console.log('parseRecipeFromContent: Jina blocked, Tavily site-scoped fallback:', siteQuery)
-      return resolveUrlAndParse(siteQuery)
+
+      case 'vague': {
+        const searchQuery = recipeTitle ?? trimmed
+        try {
+          return await resolveUrlAndParse(searchQuery)
+        } catch (err) {
+          if (err instanceof HttpsError && err.code === 'not-found') {
+            console.log('parseRecipeFromContent: no recipe found, generating from scratch')
+            return generateRecipeFromScratch(searchQuery)
+          }
+          throw err
+        }
+      }
     }
-
-    // Short text: treat as a recipe name search
-    if (trimmed.length < 200) {
-      console.log('parseRecipeFromContent: Tavily search path', trimmed)
-      return resolveUrlAndParse(trimmed)
-    }
-
-    // Long pasted text (optionally with an image)
-    console.log('parseRecipeFromContent: direct text path, chars:', trimmed.length)
-    return parseWithContent(trimmed, imageBase64 ?? null, imageMediaType ?? null, null)
   }
 )
