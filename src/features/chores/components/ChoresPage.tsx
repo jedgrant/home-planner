@@ -10,6 +10,7 @@ import { useChoreGroups, useReassignGroup } from '../hooks/useChoreGroups'
 import { useWeeklyChoreDoc, patchWeekDoc } from '../hooks/useWeeklyChores'
 import { dateToWeekId, weekIdToStartDate } from '../utils/rotation'
 import { ChoreGroupSection } from './ChoreGroupSection'
+import { InlineErrorBoundary } from '@/app/SectionErrorBoundary'
 import { format, addWeeks, subWeeks } from 'date-fns'
 
 export function ChoresPage() {
@@ -150,8 +151,9 @@ export function ChoresPage() {
 
       {/* Group sections */}
       {!isLoading && weekDoc && (
-        <div className="space-y-4">
-          {Object.entries(weekDoc.assignments)
+        <InlineErrorBoundary label="Chore groups failed to load">
+          <div className="space-y-4">
+            {Object.entries(weekDoc.assignments)
             .sort(([, a], [, b]) => a.groupName.localeCompare(b.groupName))
             .map(([groupId, assignment]) => {
               const group = groups?.find((g) => g.groupId === groupId)
@@ -202,6 +204,7 @@ export function ChoresPage() {
             </div>
           )}
         </div>
+        </InlineErrorBoundary>
       )}
     </div>
   )

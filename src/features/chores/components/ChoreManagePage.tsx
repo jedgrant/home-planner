@@ -23,6 +23,7 @@ import {
 import { ChoreGroupCard } from "./ChoreGroupCard";
 import { CreateEditChoreGroupDialog } from "./CreateEditChoreGroupDialog";
 import { RotationSettingsPanel } from "./RotationSettingsPanel";
+import { InlineErrorBoundary } from "@/app/SectionErrorBoundary";
 import type { ChoreGroup } from "@/shared/types/chores";
 import { getCurrentAssignee, dateToWeekId } from "../utils/rotation";
 
@@ -183,7 +184,8 @@ export function ChoreManagePage() {
       {/* ── Two-column layout on desktop ───────────────────────────── */}
       <div className="md:grid md:grid-cols-[1fr_280px] md:gap-6 md:items-start">
         {/* ── Group list ─────────────────────────────────────────── */}
-        <div className="space-y-4">
+        <InlineErrorBoundary label="Chore groups failed to load">
+          <div className="space-y-4">
           {groups?.length === 0 && (
             <div className="text-center py-16 text-muted-foreground">
               <p className="text-sm">
@@ -212,7 +214,8 @@ export function ChoreManagePage() {
               }
             />
           ))}
-        </div>
+          </div>
+        </InlineErrorBoundary>
 
         {/* ── Desktop: inline rotation settings column ─────────────── */}
         <div className="hidden md:block border rounded-lg p-4">

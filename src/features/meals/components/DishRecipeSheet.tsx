@@ -10,6 +10,7 @@ import { Separator } from "@/shared/components/ui/separator";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useAuthStore } from "@/shared/lib/authStore";
 import { useRecipe } from "../hooks/useRecipes";
+import { InlineErrorBoundary } from "@/app/SectionErrorBoundary";
 import type { MealItem } from "@/shared/types/meals";
 
 interface DishRecipeSheetProps {
@@ -68,12 +69,13 @@ export function DishRecipeSheet({
           )}
 
           {recipe && (
-            <>
-              {recipe.description && (
-                <p className="text-sm text-muted-foreground">
-                  {recipe.description}
-                </p>
-              )}
+            <InlineErrorBoundary label="Recipe details failed to load">
+              <>
+                {recipe.description && (
+                  <p className="text-sm text-muted-foreground">
+                    {recipe.description}
+                  </p>
+                )}
 
               {recipe.servingSize && (
                 <p className="text-sm">
@@ -146,7 +148,8 @@ export function DishRecipeSheet({
                   )}
                 </div>
               ))}
-            </>
+              </>
+            </InlineErrorBoundary>
           )}
         </div>
       </SheetContent>

@@ -38,6 +38,7 @@ import { useParseRecipeFromContent } from "../hooks/useRecipeAI";
 import { useAuthStore } from "@/shared/lib/authStore";
 import { nanoid } from "nanoid";
 import type { CourseType } from "@/shared/types/recipes";
+import { InlineErrorBoundary } from "@/app/SectionErrorBoundary";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -143,7 +144,7 @@ export function CreateRecipeSheet({
   async function onSubmit(values: FormValues) {
     const parsed = parseMutation.data;
     const components =
-      parsed?.components.map((comp) => ({
+      (parsed?.components ?? []).map((comp) => ({
         componentId: nanoid(),
         name: comp.name,
         notes: comp.notes || undefined,
@@ -240,7 +241,10 @@ export function CreateRecipeSheet({
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto pt-safe">
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-md overflow-y-auto pt-safe"
+      >
         <SheetHeader className="border-b border-b-olive-400/70">
           <SheetTitle>New Recipe</SheetTitle>
         </SheetHeader>
@@ -248,7 +252,7 @@ export function CreateRecipeSheet({
           <Tabs defaultValue="manual">
             <TabsList className="w-full">
               <TabsTrigger value="manual" className="flex-1">
-                Create from scratch
+                From scratch
               </TabsTrigger>
               <TabsTrigger value="import" className="flex-1">
                 Import with AI
@@ -321,10 +325,15 @@ export function CreateRecipeSheet({
                       <div className="px-4 pb-3">
                         <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs text-foreground">
                           <Paperclip className="h-3 w-3 text-muted-foreground" />
-                          <span className="max-w-[180px] truncate">{imageName}</span>
+                          <span className="max-w-[180px] truncate">
+                            {imageName}
+                          </span>
                           <button
                             type="button"
-                            onClick={() => { setImportImage(null); setImageName(""); }}
+                            onClick={() => {
+                              setImportImage(null);
+                              setImageName("");
+                            }}
                             className="ml-0.5 rounded-full hover:text-destructive transition-colors"
                             aria-label="Remove image"
                           >
@@ -372,11 +381,14 @@ export function CreateRecipeSheet({
 
                   {parseMutation.isError && (
                     <p className="text-sm text-destructive">
-                      {(parseMutation.error as { message?: string })?.message ?? 'Parsing failed. Check your content and try again.'}
+                      {(parseMutation.error as { message?: string })?.message ??
+                        "Parsing failed. Check your content and try again."}
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground text-center">
-                    Works with URLs, pasted recipes, photos, dish names, or descriptions like &ldquo;a cozy chicken soup for the winter&rdquo;.
+                    Works with URLs, pasted recipes, photos, dish names, or
+                    descriptions like &ldquo;a cozy chicken soup for the
+                    winter&rdquo;.
                   </p>
                 </>
               ) : (
@@ -402,16 +414,26 @@ export function CreateRecipeSheet({
                       )}
                     />
                     <CourseAndServesFields />
-                    {parseMutation.data && (
-                      <p className="text-sm text-muted-foreground rounded-lg bg-muted p-3">
-                        {parseMutation.data.components.reduce((sum, c) => sum + c.ingredients.length, 0)} ingredients and{" "}
-                        {parseMutation.data.components.reduce((sum, c) => sum + c.tasks.length, 0)} prep tasks across{" "}
-                        {parseMutation.data.components.length === 1
-                          ? "1 component"
-                          : `${parseMutation.data.components.length} components`}{" "}
-                        &mdash; fully editable on the recipe page.
-                      </p>
-                    )}
+                    <InlineErrorBoundary label="Recipe components failed to load">
+                      {parseMutation.data && (
+                        <p className="text-sm text-muted-foreground rounded-lg bg-muted p-3">
+                          {(parseMutation.data.components ?? []).reduce(
+                            (sum, c) => sum + c.ingredients.length,
+                            0,
+                          )}{" "}
+                          ingredients and{" "}
+                          {(parseMutation.data.components ?? []).reduce(
+                            (sum, c) => sum + c.tasks.length,
+                            0,
+                          )}{" "}
+                          prep tasks across{" "}
+                          {(parseMutation.data.components ?? []).length === 1
+                            ? "1 component"
+                            : `${(parseMutation.data.components ?? []).length} components`}{" "}
+                          &mdash; fully editable on the recipe page.
+                        </p>
+                      )}
+                    </InlineErrorBoundary>
                     <div className="flex gap-2">
                       <Button
                         type="button"

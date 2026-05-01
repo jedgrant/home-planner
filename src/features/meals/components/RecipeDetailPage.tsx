@@ -41,6 +41,7 @@ import { useAISuggestRecipe, useAISuggestTasks } from "../hooks/useRecipeAI";
 import { useStores } from "@/features/grocery/hooks/useStores";
 import { useAuthStore } from "@/shared/lib/authStore";
 import { nanoid } from "nanoid";
+import { InlineErrorBoundary } from "@/app/SectionErrorBoundary";
 import type { RecipeComponent, CourseType } from "@/shared/types/recipes";
 
 const courseLabels: Record<CourseType, string> = {
@@ -468,30 +469,32 @@ export function RecipeDetailPage() {
         )}
 
       {/* Components (replaces separate Ingredients + Prep Tasks sections) */}
-      <section className="mt-6">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-foreground">Components</h2>
-          {isParent && !isGlobalView && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={aiSuggestRecipe.isPending || aiSuggestTasks.isPending}
-              onClick={handleAISuggestTasks}
-            >
-              <Sparkles className="h-4 w-4 mr-1" />
-              {aiSuggestTasks.isPending ? "Asking AI…" : "Suggest Tasks"}
-            </Button>
-          )}
-        </div>
-        <RecipeComponentEditor
-          components={components}
-          onChange={handleComponentsChange}
-          onSave={handleComponentsSave}
-          stores={stores}
-          disabled={!isParent || isGlobalView}
-        />
-      </section>
+      <InlineErrorBoundary label="Recipe components failed to load">
+        <section className="mt-6">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-foreground">Components</h2>
+            {isParent && !isGlobalView && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={aiSuggestRecipe.isPending || aiSuggestTasks.isPending}
+                onClick={handleAISuggestTasks}
+              >
+                <Sparkles className="h-4 w-4 mr-1" />
+                {aiSuggestTasks.isPending ? "Asking AI…" : "Suggest Tasks"}
+              </Button>
+            )}
+          </div>
+          <RecipeComponentEditor
+            components={components}
+            onChange={handleComponentsChange}
+            onSave={handleComponentsSave}
+            stores={stores}
+            disabled={!isParent || isGlobalView}
+          />
+        </section>
+      </InlineErrorBoundary>
 
       {/* Archive confirm */}
       <AlertDialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>

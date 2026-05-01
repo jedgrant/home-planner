@@ -622,42 +622,44 @@ export function MealDetailPage() {
 
         {/* Tasks tab */}
         <TabsContent value="tasks">
-          {items.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No items added yet.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {items.map((item) => (
-                <MealItemSection
-                  key={item.itemId}
-                  item={item}
-                  isServed={isServed}
-                  isParent={isParent}
-                  currentUserId={user?.uid ?? ""}
-                  familyMembers={familyMembers}
-                  onRemoveItem={() => handleRemoveItem(item.itemId)}
-                  onAssignTask={(
-                    componentId,
-                    taskId,
-                    assigneeId,
-                    assigneeName,
-                  ) =>
-                    handleAssignTask(
-                      item.itemId,
+          <InlineErrorBoundary label="Tasks list failed to load">
+            {items.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No items added yet.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {items.map((item) => (
+                  <MealItemSection
+                    key={item.itemId}
+                    item={item}
+                    isServed={isServed}
+                    isParent={isParent}
+                    currentUserId={user?.uid ?? ""}
+                    familyMembers={familyMembers}
+                    onRemoveItem={() => handleRemoveItem(item.itemId)}
+                    onAssignTask={(
                       componentId,
                       taskId,
                       assigneeId,
                       assigneeName,
-                    )
-                  }
-                  onViewRecipe={
-                    item.recipeId ? () => setRecipeSheetItem(item) : undefined
-                  }
-                />
-              ))}
-            </div>
-          )}
+                    ) =>
+                      handleAssignTask(
+                        item.itemId,
+                        componentId,
+                        taskId,
+                        assigneeId,
+                        assigneeName,
+                      )
+                    }
+                    onViewRecipe={
+                      item.recipeId ? () => setRecipeSheetItem(item) : undefined
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </InlineErrorBoundary>
         </TabsContent>
       </Tabs>
 

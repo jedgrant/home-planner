@@ -22,6 +22,7 @@ import { useAllGroceryItems } from "../hooks/useAllGroceryItems";
 import { useGroceryItemMutations } from "../hooks/useGroceryItemMutations";
 import { StoreCard } from "./StoreCard";
 import { AddEditStoreDialog } from "./AddEditStoreDialog";
+import { InlineErrorBoundary } from "@/app/SectionErrorBoundary";
 import type { GroceryItem } from "@/shared/types/grocery";
 
 export function GroceryPage() {
@@ -220,20 +221,22 @@ export function GroceryPage() {
             )}
           </div>
         ) : (
-          <div className="columns-1 sm:columns-2 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
-            {storeList.map((store) => (
-              <StoreCard
-                key={store.storeId}
-                store={store}
-                items={getStoreItems(store.storeId)}
-                isParent={isParent}
-                onEdit={(name, notes) =>
-                  editStore.mutateAsync({ storeId: store.storeId, name, notes })
-                }
-                onRemove={() => archiveStore.mutateAsync(store.storeId)}
-              />
-            ))}
-          </div>
+          <InlineErrorBoundary label="Store cards failed to load">
+            <div className="columns-1 sm:columns-2 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
+              {storeList.map((store) => (
+                <StoreCard
+                  key={store.storeId}
+                  store={store}
+                  items={getStoreItems(store.storeId)}
+                  isParent={isParent}
+                  onEdit={(name, notes) =>
+                    editStore.mutateAsync({ storeId: store.storeId, name, notes })
+                  }
+                  onRemove={() => archiveStore.mutateAsync(store.storeId)}
+                />
+              ))}
+            </div>
+          </InlineErrorBoundary>
         )}
       </div>
 

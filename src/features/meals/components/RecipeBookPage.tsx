@@ -25,6 +25,7 @@ import {
   useForkGlobalRecipe,
 } from "../hooks/useRecipes";
 import { useAuthStore } from "@/shared/lib/authStore";
+import { InlineErrorBoundary } from "@/app/SectionErrorBoundary";
 import type { CourseType } from "@/shared/types/recipes";
 
 const COURSE_OPTIONS: { value: CourseType | "all"; label: string }[] = [
@@ -122,54 +123,58 @@ export function RecipeBookPage() {
         </TabsList>
 
         <TabsContent value="family" className="mt-4">
-          {loadingFamily ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {skeletons}
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              {search || courseFilter !== "all"
-                ? "No recipes match your filters."
-                : "No recipes yet. Create your first one!"}
-            </p>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((r) => (
-                <RecipeCard
-                  key={r.recipeId}
-                  recipe={r}
-                  onClick={() => navigate(`/recipes/${r.recipeId}`)}
-                />
-              ))}
-            </div>
-          )}
+          <InlineErrorBoundary label="Recipe list failed to load">
+            {loadingFamily ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {skeletons}
+              </div>
+            ) : filtered.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                {search || courseFilter !== "all"
+                  ? "No recipes match your filters."
+                  : "No recipes yet. Create your first one!"}
+              </p>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filtered.map((r) => (
+                  <RecipeCard
+                    key={r.recipeId}
+                    recipe={r}
+                    onClick={() => navigate(`/recipes/${r.recipeId}`)}
+                  />
+                ))}
+              </div>
+            )}
+          </InlineErrorBoundary>
         </TabsContent>
 
         <TabsContent value="global" className="mt-4">
-          {loadingGlobal ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {skeletons}
-            </div>
-          ) : filteredGlobal.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              {search || courseFilter !== "all"
-                ? "No recipes match your filters."
-                : "The global library is empty."}
-            </p>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredGlobal.map((r) => (
-                <RecipeCard
-                  key={r.recipeId}
-                  recipe={r}
-                  onClick={() =>
-                    navigate(`/recipes/${r.recipeId}?source=global`)
-                  }
-                  onFork={isParent ? () => forkMutation.mutate(r) : undefined}
-                />
-              ))}
-            </div>
-          )}
+          <InlineErrorBoundary label="Public recipes failed to load">
+            {loadingGlobal ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {skeletons}
+              </div>
+            ) : filteredGlobal.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                {search || courseFilter !== "all"
+                  ? "No recipes match your filters."
+                  : "The global library is empty."}
+              </p>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredGlobal.map((r) => (
+                  <RecipeCard
+                    key={r.recipeId}
+                    recipe={r}
+                    onClick={() =>
+                      navigate(`/recipes/${r.recipeId}?source=global`)
+                    }
+                    onFork={isParent ? () => forkMutation.mutate(r) : undefined}
+                  />
+                ))}
+              </div>
+            )}
+          </InlineErrorBoundary>
         </TabsContent>
       </Tabs>
 

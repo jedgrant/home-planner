@@ -27,6 +27,7 @@ import { useGroceryItemMutations } from "../hooks/useGroceryItemMutations";
 import { useItemNameHistory } from "../hooks/useItemNameHistory";
 import { GroceryItemRow } from "./GroceryItemRow";
 import { QuickPickSheet } from "./QuickPickSheet";
+import { InlineErrorBoundary } from "@/app/SectionErrorBoundary";
 
 export function StoreListPage() {
   const { storeId = "" } = useParams<{ storeId: string }>();
@@ -166,7 +167,8 @@ export function StoreListPage() {
       </div>
 
       {/* Pending items + inline add */}
-      {isLoading ? (
+      <InlineErrorBoundary label="Shopping list failed to load">
+        {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-12 rounded-lg" />
@@ -258,8 +260,9 @@ export function StoreListPage() {
           </div>
         </div>
       )}
+      </InlineErrorBoundary>
 
-      {/* ── Recently purchased chips ───────────────────────── */}
+      {/* ── Recently purchased chips ────────────────────────────────────── */}
       {recentChips.length > 0 && (
         <section>
           <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
@@ -286,9 +289,10 @@ export function StoreListPage() {
         </section>
       )}
 
-      {/* ── Purchase history ───────────────────────────────── */}
+      {/* ── Purchase history ──────────────────────────────────────────────── */}
       {completedItems.length > 0 && (
-        <section className="bg-card rounded-xl shadow-sm px-4">
+        <InlineErrorBoundary label="Purchase history failed to load">
+          <section className="bg-card rounded-xl shadow-sm px-4">
           <button
             type="button"
             className="flex w-full items-center justify-between py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -361,6 +365,7 @@ export function StoreListPage() {
             </>
           )}
         </section>
+        </InlineErrorBoundary>
       )}
 
       {/* Quick Pick Sheet */}
